@@ -1,5 +1,5 @@
 package nachos.threads;
-
+import java.util.*;
 import nachos.machine.*;
 
 /**
@@ -15,6 +15,8 @@ public class Alarm {
 	 * <b>Note</b>: Nachos will not function correctly with more than one alarm.
 	 */
 	public Alarm() {
+		//Initialized the t_queue in the constructor
+		this.t_queue = new LinkedList<>();
 		Machine.timer().setInterruptHandler(new Runnable() {
 			public void run() {
 				timerInterrupt();
@@ -30,6 +32,12 @@ public class Alarm {
 	 */
 	public void timerInterrupt() {
 		KThread.currentThread().yield();
+		long cur_systime = Machine.timer().getTime();
+		while (!this.t_queue.isEmpty() && this.t_queue.peek().waittime <= cur_systime){
+			Thread_with_time instan = this.t_queue.poll();
+			KThread t_ch = instan.thread;
+			t_ch.ready();
+		}
 	}
 
 	/**
@@ -44,14 +52,31 @@ public class Alarm {
 	 * 
 	 * @see nachos.machine.Timer#getTime()
 	 */
+
 	public void waitUntil(long x) {
 		// for now, cheat just to get something working (busy waiting is bad)
-		long wakeTime = Machine.timer().getTime() + x;
-		while (wakeTime > Machine.timer().getTime())
-			KThread.yield();
+//         long wakeTime = Machine.timer().getTime() + x;
+//         while (wakeTime > Machine.timer().getTime())
+//         KThread.yield();
+		long waketime = Machine.timer().getTime() + x;
+		this.t_queue.add(new Thread_with_time(KThread.currentThread(), waketime));
+		Machine.interrupt().disable();
+		KThread.sleep();
 	}
-
-        /**
+    /**
+     * Add self Test to the alarm class 
+    */
+    public static void alarmTest1(){
+    	int durations[] = {1000, 10*1000, 100*1000};
+    	long t0, t1;
+    	for (int d : durations){
+    		t0 = Machine.timer().getTime();
+    		ThreadedKernel.alarm.waitUntil (d);
+    		t1 = Machine.timer().getTime();
+    		System.out.println ("alarmTest1: waited for " + (t1 - t0) + " ticks");
+    	}
+    }
+     /**
 	 * Cancel any timer set by <i>thread</i>, effectively waking
 	 * up the thread immediately (placing it in the scheduler
 	 * ready set) and returning true.  If <i>thread</i> has no
@@ -60,7 +85,20 @@ public class Alarm {
 	 * <p>
 	 * @param thread the thread whose timer should be cancelled.
 	 */
-        public boolean cancel(KThread thread) {
+     public boolean cancel(KThread thread) {
 		return false;
-	}
+	 }
+     
+ 	/**
+ 	 * Initialized data structure here
+ 	 */
+     class Thread_with_time{
+    	 KThread thread;
+    	 long waittime;
+    	 Thread_with_time(KThread thread, long waittime){
+    		 this.thread = thread;
+    		 this.waittime = waittime;
+    	 }
+     }
+     private Queue<Thread_with_time> t_queue;
 }

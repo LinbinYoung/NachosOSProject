@@ -33,9 +33,7 @@ public class ThreadedKernel extends Kernel {
 
 		// start threading
 		new KThread(null);
-
 		alarm = new Alarm();
-
 		Machine.interrupt().enable();
 	}
 
@@ -45,15 +43,15 @@ public class ThreadedKernel extends Kernel {
 	 * autograder never calls this method, so it is safe to put additional tests
 	 * here.
 	 */
-	public void selfTest() {
+	public void selfTest(){
 		KThread.selfTest();
 		Semaphore.selfTest();
 		SynchList.selfTest();
+		alarm.alarmTest1();
 		if (Machine.bank() != null) {
 			ElevatorBank.selfTest();
 		}
 	}
-
 	/**
 	 * A threaded kernel does not run user programs, so this method does
 	 * nothing.
@@ -92,5 +90,5 @@ public class ThreadedKernel extends Kernel {
 
 	private static ElevatorController dummy7 = null;
 
-        private static GameMatch dummy8 = null;
+    private static GameMatch dummy8 = null;
 }
