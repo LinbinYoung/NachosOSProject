@@ -203,6 +203,10 @@ public class KThread {
 
 		currentThread.status = statusFinished;
 
+		if (currentThread.joinThread != null) {
+			currentThread.joinThread.ready();
+		}
+
 		sleep();
 	}
 
@@ -282,9 +286,19 @@ public class KThread {
 	 */
 	public void join() {
 		Lib.debug(dbgThread, "Joining to thread: " + toString());
-
+		
+		// A thread cannot join to itself
 		Lib.assertTrue(this != currentThread);
+		// Join can be called on a thread at most once.
+		Lib.assertTrue(this.joinThread != null);
+		// If this thread is already finished return immediately
+		if (this.status == statusFinished) return;
 
+		this.joinThread = currentThread;
+		Machine.Interrupt().disable();
+		currentThread.sleep();
+		
+		return;
 	}
 
 	/**
@@ -489,4 +503,7 @@ public class KThread {
 	private static KThread toBeDestroyed = null;
 
 	private static KThread idleThread = null;
+
+	/* Check if the thread is joined by its parent" */
+	private KThread joinThread = null;
 }
