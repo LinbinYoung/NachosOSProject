@@ -290,12 +290,12 @@ public class KThread {
 		// A thread cannot join to itself
 		Lib.assertTrue(this != currentThread);
 		// Join can be called on a thread at most once.
-		Lib.assertTrue(this.joinThread != null);
+		Lib.assertTrue(this.joinThread == null);
 		// If this thread is already finished return immediately
 		if (this.status == statusFinished) return;
 
 		this.joinThread = currentThread;
-		Machine.Interrupt().disable();
+		Machine.interrupt().disable();
 		currentThread.sleep();
 		
 		return;
@@ -452,6 +452,11 @@ public class KThread {
 
 		new KThread(new PingTest(1)).setName("forked thread").fork();
 		new PingTest(0).run();
+		
+		System.out.println("=======Test Condidition2.selfTest()=======");
+		Condition2.selfTest();
+		
+		System.out.println("=======Test joinTest1()=======");
 		KThread.joinTest1();
 	}
 
@@ -504,6 +509,6 @@ public class KThread {
 
 	private static KThread idleThread = null;
 
-	/* Check if the thread is joined by its parent" */
+	/* Check if the thread is joined by its parent */
 	private KThread joinThread = null;
 }

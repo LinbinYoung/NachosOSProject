@@ -62,6 +62,8 @@ public class Alarm {
 		this.t_queue.add(new Thread_with_time(KThread.currentThread(), waketime));
 		Machine.interrupt().disable();
 		KThread.sleep();
+		
+		Machine.interrupt().enable();
 	}
     /**
      * Add self Test to the alarm class 
