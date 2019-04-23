@@ -26,20 +26,7 @@ public class Condition2 {
 	public Condition2(Lock conditionLock) {
 		this.conditionLock = conditionLock;
 		this.queue = new LinkedList<>();
-		this.t_queue = new LinkedList<>();
-		Machine.timer().setInterruptHandler(new Runnable() {
-			public void run() {
-				timerInterrupt();
-			}
-		});
-	}
-
-	public void timerInterrupt() {
-		KThread.yield();
-		long cur_systime = Machine.timer().getTime();
-		while (!this.t_queue.isEmpty() && this.t_queue.peek().waittime <= cur_systime) {
-			this.t_queue.poll().thread.ready();
-		}
+		this.alarm = new Alarm();
 	}
 
 	/**
@@ -50,13 +37,12 @@ public class Condition2 {
 	 */
 	public void sleep() {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
-
-		conditionLock.release();
 		boolean intStatus = Machine.interrupt().disable();
+		conditionLock.release();
 		queue.offer(KThread.currentThread());
 		KThread.sleep();
-		Machine.interrupt().restore(intStatus);
 		conditionLock.acquire();
+		Machine.interrupt().restore(intStatus);
 	}
 
 	/**
@@ -67,14 +53,9 @@ public class Condition2 {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
 
 		boolean intStatus = Machine.interrupt().disable();
-		if (!this.queue.isEmpty() || !this.t_queue.isEmpty()) {
-			if (!this.queue.isEmpty())
-				this.queue.poll().ready();
-			else
-				this.t_queue.poll().thread.ready();
-			;
+		if (!this.queue.isEmpty()) {
+			this.queue.poll().ready();
 		}
-
 		Machine.interrupt().restore(intStatus);
 
 	}
@@ -100,12 +81,12 @@ public class Condition2 {
 	 */
 	public void sleepFor(long timeout) {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
-		conditionLock.release();
 		boolean intStatus = Machine.interrupt().disable();
-		this.t_queue.offer(new Thread_with_time(KThread.currentThread(), timeout + Machine.timer().getTime()));
-		KThread.sleep();
-		Machine.interrupt().restore(intStatus);
+		conditionLock.release();
+//		KThread.yield();
+		alarm.waitUntil(timeout);
 		conditionLock.acquire();
+		Machine.interrupt().restore(intStatus);
 	}
 
 	// Invoke Condition2.selfTest() from ThreadedKernel.selfTest()
@@ -116,18 +97,7 @@ public class Condition2 {
 
 	private Lock conditionLock;
 	private Queue<KThread> queue;
-
-	class Thread_with_time {
-		KThread thread;
-		long waittime;
-
-		Thread_with_time(KThread thread, long waittime) {
-			this.thread = thread;
-			this.waittime = waittime;
-		}
-	}
-
-	private Queue<Thread_with_time> t_queue;
+	private Alarm alarm;
 
 	// Place Condition2 testing code in the Condition2 class.
 	// Example of the "interlock" pattern where two threads strictly

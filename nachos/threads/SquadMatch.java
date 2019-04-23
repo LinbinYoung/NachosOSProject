@@ -16,9 +16,7 @@ public class SquadMatch {
 	private Condition warCond;
 	private Condition wizCond;
 	private Condition thiCond;
-	private Lock warLock;
-	private Lock wizLock;
-	private Lock thiLock;
+	private Lock lock;
 	private int warCount;
 	private int wizCount;
 	private int thiCount;
@@ -29,12 +27,10 @@ public class SquadMatch {
 	 */
 	public SquadMatch() {
 //		this.list = new LinkedList<>();
-		this.warLock = new Lock();
-		this.wizLock = new Lock();
-		this.thiLock = new Lock();
-		this.warCond = new Condition(warLock);
-		this.wizCond = new Condition(wizLock);
-		this.thiCond = new Condition(thiLock);
+		this.lock = new Lock();
+		this.warCond = new Condition(lock);
+		this.wizCond = new Condition(lock);
+		this.thiCond = new Condition(lock);
 		this.warCount = 0;
 		this.wizCount = 0;
 		this.thiCount = 0;
@@ -48,34 +44,22 @@ public class SquadMatch {
 	 * be assigned to only one match.
 	 */
 	public void warrior() {
-//		Runnable warrior = new Runnable() {
-//			public void run() {
-//				System.out.println("Warrior marching");
-//			}
-//		};
 		boolean intStatus = Machine.interrupt().disable();
-//		KThread kth = new KThread(warrior);
-		
 		if (this.wizCount >= 1 && this.thiCount >= 1) {
-			System.out.println("Debugging war 001");
 			this.wizCount--;
 			this.thiCount--;
-			KThread.yield();
-			if(!wizLock.isHeldByCurrentThread()) wizLock.acquire();
+			if (!lock.isHeldByCurrentThread())
+				lock.acquire();
 			wizCond.wake();
-			wizLock.release();
-			thiLock.acquire();
 			thiCond.wake();
-			thiLock.release();
-//			kth.ready();
+//			KThread.yield();
+			lock.release();
 		} else {
 			this.warCount++;
-			System.out.println("Warriors count"+this.warCount);
-//			kth.ready();
-//			KThread.yield();
-			if(!warLock.isHeldByCurrentThread()) warLock.acquire();
+			if (!lock.isHeldByCurrentThread())
+				lock.acquire();
 			this.warCond.sleep();
-			warLock.release();
+			lock.release();
 		}
 		Machine.interrupt().restore(intStatus);
 	}
@@ -88,33 +72,25 @@ public class SquadMatch {
 	 * be assigned to only one match.
 	 */
 	public void wizard() {
-//		Runnable wizard = new Runnable() {
-//			public void run() {
-//				System.out.println("Wizard marching");
-//			}
-//		};
 		boolean intStatus = Machine.interrupt().disable();
 //		KThread kth = new KThread(wizard);
-		
+
 		if (this.warCount >= 1 && this.thiCount >= 1) {
-			System.out.println("Debugging wiz 001");
+//			System.out.println("Debugging wiz 001");
 			this.warCount--;
 			this.thiCount--;
-			KThread.yield();
-			if(!warLock.isHeldByCurrentThread()) warLock.acquire();
+			if (!lock.isHeldByCurrentThread())
+				lock.acquire();
 			warCond.wake();
-			warLock.release();
-			thiLock.acquire();
 			thiCond.wake();
-			thiLock.release();
-//			kth.ready();
+//			KThread.yield();
+			lock.release();
 		} else {
 			this.wizCount++;
-//			kth.ready();
-//			KThread.yield();
-			if(!wizLock.isHeldByCurrentThread()) wizLock.acquire();
+			if (!lock.isHeldByCurrentThread())
+				lock.acquire();
 			this.wizCond.sleep();
-			wizLock.release();
+			lock.release();
 		}
 		Machine.interrupt().restore(intStatus);
 	}
@@ -127,71 +103,26 @@ public class SquadMatch {
 	 * be assigned to only one match.
 	 */
 	public void thief() {
-//		Runnable thief = new Runnable() {
-//			public void run() {
-//				System.out.println("Thief marching");
-//			}
-//		};
 		boolean intStatus = Machine.interrupt().disable();
-//		KThread kth = new KThread(thief);
-		System.out.println("Debugging 002");
 		if (this.warCount >= 1 && this.wizCount >= 1) {
-			System.out.println("Debugging thi 001");
 			this.warCount--;
 			this.wizCount--;
-			KThread.yield();
-//			System.out.println("Debugging 003 in If");
-			if(!warLock.isHeldByCurrentThread()) warLock.acquire();
-			
+			if (!lock.isHeldByCurrentThread())
+				lock.acquire();
 			warCond.wake();
-			warLock.release();
-			wizLock.acquire();
 			wizCond.wake();
-			wizLock.release();
-//			kth.ready();
-			System.out.println("Debugging thi 002");
+//			KThread.yield();
+			lock.release();
 		} else {
 			this.thiCount++;
-			
-//			kth.ready();
-			
-//			KThread.yield();
-			if(!thiLock.isHeldByCurrentThread()) thiLock.acquire();
+			if (!lock.isHeldByCurrentThread())
+				lock.acquire();
 			this.thiCond.sleep();
-			thiLock.release();
+			lock.release();
 		}
 		Machine.interrupt().restore(intStatus);
-//		boolean intStatus = Machine.interrupt().disable();
-//		if (this.thiCount >= Math.max(this.warCount, this.wizCount)) {
-//			this.thiCount++;
-//			Condition cond = new Condition(new Lock());
-//			this.list.add(cond);
-//			
-//			KThread kth = new KThread();
-//			kth.ready();
-//			KThread.yield();
-//
-//			cond.sleep();
-//		} else if (this.warCount >= 1 || this.wizCount >= 1) {
-//			this.warCount--;
-//			this.wizCount--;
-//			KThread kth = new KThread();
-//			kth.ready();
-//			
-//			KThread.yield();
-//			this.list.remove().wakeAll();
-//		} else {
-//			this.thiCount++;
-//			KThread kth = new KThread();
-//			kth.ready();
-//			
-//			KThread.yield();
-//			list.get(this.thiCount - 1).sleep();
-//		}
-//		Machine.interrupt().restore(intStatus);
 	}
 
-	// Place SquadMatch test code inside of the SquadMatch class.
 	public static void squadTest1() {
 		final SquadMatch match = new SquadMatch();
 
@@ -203,7 +134,6 @@ public class SquadMatch {
 			}
 		});
 		w1.setName("w1");
-		
 
 		KThread z1 = new KThread(new Runnable() {
 			public void run() {
@@ -212,6 +142,7 @@ public class SquadMatch {
 			}
 		});
 		z1.setName("z1");
+
 		KThread t1 = new KThread(new Runnable() {
 			public void run() {
 				match.thief();
@@ -219,21 +150,48 @@ public class SquadMatch {
 			}
 		});
 		t1.setName("t1");
+
+		KThread t2 = new KThread(new Runnable() {
+			public void run() {
+				match.thief();
+				System.out.println("t2 matched");
+			}
+		});
+		t1.setName("t2");
+
+		KThread z2 = new KThread(new Runnable() {
+			public void run() {
+				match.wizard();
+				System.out.println("z2 matched");
+			}
+		});
+		z1.setName("z2");
+
+		KThread w2 = new KThread(new Runnable() {
+			public void run() {
+				match.warrior();
+				System.out.println("w2 matched");
+			}
+		});
+		w1.setName("w2");
+
 		// Run the threads.
 		w1.fork();
 		z1.fork();
 		t1.fork();
-		
+		t2.fork();
+		z2.fork();
+		w2.fork();
+
 		// if you have join implemented, use the following:
 		w1.join();
 		z1.join();
 		t1.join();
-//		
 		// if you do not have join implemented, use yield to allow
 		// time to pass...10 yields should be enough
-//		for (int i = 0; i < 10; i++) {
-//			KThread.currentThread().yield();
-//		}
+//	     for (int i = 0; i < 10; i++) {
+//	         KThread.currentThread().yield();
+//	     }
 	}
 
 	public static void selfTest() {

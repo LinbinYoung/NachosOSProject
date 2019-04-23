@@ -17,7 +17,6 @@ public class Alarm {
 	 */
 	public Alarm() {
 		// Initialized the t_queue in the constructor
-		this.t_queue = new LinkedList<>();
 		Machine.timer().setInterruptHandler(new Runnable() {
 			public void run() {
 				timerInterrupt();
@@ -32,11 +31,13 @@ public class Alarm {
 	 * run.
 	 */
 	public void timerInterrupt() {
-		KThread.yield();
 		long cur_systime = Machine.timer().getTime();
-		while (!this.t_queue.isEmpty() && this.t_queue.peek().waittime <= cur_systime) {
-			this.t_queue.poll().thread.ready();
+		boolean intStatus = Machine.interrupt().disable();
+		while (!t_queue.isEmpty() && t_queue.peek().waittime <= cur_systime) {
+			t_queue.poll().thread.ready();
 		}
+		Machine.interrupt().restore(intStatus);
+		KThread.yield();
 	}
 
 	/**
@@ -57,17 +58,19 @@ public class Alarm {
 //         long wakeTime = Machine.timer().getTime() + x;
 //         while (wakeTime > Machine.timer().getTime())
 //         KThread.yield();
+		if(x<=0) return;
 		long waketime = Machine.timer().getTime() + x;
-		this.t_queue.add(new Thread_with_time(KThread.currentThread(), waketime));
-		Machine.interrupt().disable();
+		t_queue.add(new Thread_with_time(KThread.currentThread(), waketime));
+		boolean intStatus = Machine.interrupt().disable();
 		KThread.sleep();
+		Machine.interrupt().restore(intStatus);
 	}
 
 	/**
 	 * Add self Test to the alarm class
 	 */
 	public static void alarmTest1() {
-		int durations[] = { 1000, 10 * 1000, 100 * 1000 };
+		int durations[] = { 100 * 1000,1000, 10 * 1000,  };
 		long t0, t1;
 		for (int d : durations) {
 			t0 = Machine.timer().getTime();
@@ -75,6 +78,37 @@ public class Alarm {
 			t1 = Machine.timer().getTime();
 			System.out.println("alarmTest1: waited for " + (t1 - t0) + " ticks");
 		}
+		
+		KThread war = new KThread(new Runnable() {
+			public void run() {
+				System.out.println("warrior");
+			}
+		});
+		KThread wiz = new KThread(new Runnable() {
+			public void run() {
+				System.out.println("wizard");
+			}
+		});
+		KThread thi = new KThread(new Runnable() {
+			public void run() {
+				System.out.println("thief");
+			}
+		});
+		
+		boolean intStatus = Machine.interrupt().disable();
+		war.fork();
+		wiz.fork();
+		thi.fork();
+		thi.join();
+		wiz.join();
+		war.join();
+		ThreadedKernel.alarm.waitUntil(10*100000);
+//		KThread.yield();
+		ThreadedKernel.alarm.waitUntil(10*10);
+//		KThread.yield();
+		ThreadedKernel.alarm.waitUntil(10*100);
+		Machine.interrupt().restore(intStatus);
+//		System.out.println("alarmTest2: warrior waited for " + (t1 - t0) + " ticks");
 	}
 
 	/**
@@ -87,6 +121,9 @@ public class Alarm {
 	 * @param thread the thread whose timer should be cancelled.
 	 */
 	public boolean cancel(KThread thread) {
+		for (Thread_with_time kth : Alarm.t_queue) {
+			return Alarm.t_queue.remove(kth);
+		}
 		return false;
 	}
 
@@ -102,6 +139,12 @@ public class Alarm {
 			this.waittime = waittime;
 		}
 	}
-
-	private Queue<Thread_with_time> t_queue;
+	
+//	private static Queue<Thread_with_time> t_queue = new LinkedList<>();
+	private static PriorityQueue<Thread_with_time> t_queue = new PriorityQueue<>(new Comparator<Thread_with_time>() {
+		public int compare(Thread_with_time a, Thread_with_time b) {
+			if (a.waittime-b.waittime < 0) return -1;
+			else return 1;
+		}
+	});
 }
