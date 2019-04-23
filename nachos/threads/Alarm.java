@@ -81,34 +81,29 @@ public class Alarm {
 		
 		KThread war = new KThread(new Runnable() {
 			public void run() {
+				ThreadedKernel.alarm.waitUntil(10*100000);
 				System.out.println("warrior");
 			}
 		});
 		KThread wiz = new KThread(new Runnable() {
 			public void run() {
+				ThreadedKernel.alarm.waitUntil(10*10);
 				System.out.println("wizard");
 			}
 		});
 		KThread thi = new KThread(new Runnable() {
 			public void run() {
+				ThreadedKernel.alarm.waitUntil(10*1000);
 				System.out.println("thief");
 			}
 		});
 		
-		boolean intStatus = Machine.interrupt().disable();
 		war.fork();
 		wiz.fork();
 		thi.fork();
-		thi.join();
-		wiz.join();
 		war.join();
-		ThreadedKernel.alarm.waitUntil(10*100000);
-//		KThread.yield();
-		ThreadedKernel.alarm.waitUntil(10*10);
-//		KThread.yield();
-		ThreadedKernel.alarm.waitUntil(10*100);
-		Machine.interrupt().restore(intStatus);
-//		System.out.println("alarmTest2: warrior waited for " + (t1 - t0) + " ticks");
+		wiz.join();
+		thi.join();
 	}
 
 	/**
@@ -122,7 +117,7 @@ public class Alarm {
 	 */
 	public boolean cancel(KThread thread) {
 		for (Thread_with_time kth : Alarm.t_queue) {
-			return Alarm.t_queue.remove(kth);
+			if(kth.thread == thread) return Alarm.t_queue.remove(kth);
 		}
 		return false;
 	}
@@ -147,4 +142,6 @@ public class Alarm {
 			else return 1;
 		}
 	});
+//	private static PriorityQueue<Thread_with_time> t_queue = new PriorityQueue<>((a,b) -> (a.waittime - b.waittime>0?1:-1));
+
 }

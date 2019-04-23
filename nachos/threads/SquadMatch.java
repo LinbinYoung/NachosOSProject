@@ -157,7 +157,7 @@ public class SquadMatch {
 				System.out.println("t2 matched");
 			}
 		});
-		t1.setName("t2");
+		t2.setName("t2");
 
 		KThread z2 = new KThread(new Runnable() {
 			public void run() {
@@ -165,7 +165,7 @@ public class SquadMatch {
 				System.out.println("z2 matched");
 			}
 		});
-		z1.setName("z2");
+		z2.setName("z2");
 
 		KThread w2 = new KThread(new Runnable() {
 			public void run() {
@@ -173,7 +173,31 @@ public class SquadMatch {
 				System.out.println("w2 matched");
 			}
 		});
-		w1.setName("w2");
+		w2.setName("w2");
+		
+		KThread z3 = new KThread(new Runnable() {
+			public void run() {
+				match.wizard();
+				System.out.println("z3 matched");
+			}
+		});
+		z3.setName("z3");
+
+		KThread w3 = new KThread(new Runnable() {
+			public void run() {
+				match.warrior();
+				System.out.println("w3 matched");
+			}
+		});
+		w3.setName("w3");
+		
+		KThread t3 = new KThread(new Runnable() {
+			public void run() {
+				match.thief();
+				System.out.println("t3 matched");
+			}
+		});
+		t3.setName("t3");
 
 		// Run the threads.
 		w1.fork();
@@ -182,11 +206,20 @@ public class SquadMatch {
 		t2.fork();
 		z2.fork();
 		w2.fork();
+		z3.fork();
+//		w3.fork();
+		t3.fork();
 
 		// if you have join implemented, use the following:
 		w1.join();
-		z1.join();
-		t1.join();
+//		System.out.println("Debugging");
+//		z1.join();
+//		t1.join();
+//		t2.join();
+//		w2.join();
+//		z2.join();
+//		z3.join();
+//		t3.join();
 		// if you do not have join implemented, use yield to allow
 		// time to pass...10 yields should be enough
 //	     for (int i = 0; i < 10; i++) {

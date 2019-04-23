@@ -205,7 +205,6 @@ public class KThread {
 			KThread.currentThread().toBeJoined = null;
 			tmp.ready();
 		}
-
 		sleep();
 	}
 

@@ -54,6 +54,7 @@ public class Condition2 {
 
 		boolean intStatus = Machine.interrupt().disable();
 		if (!this.queue.isEmpty()) {
+			this.alarm.cancel(KThread.currentThread());
 			this.queue.poll().ready();
 		}
 		Machine.interrupt().restore(intStatus);
@@ -84,6 +85,7 @@ public class Condition2 {
 		boolean intStatus = Machine.interrupt().disable();
 		conditionLock.release();
 //		KThread.yield();
+		this.queue.offer(KThread.currentThread());
 		alarm.waitUntil(timeout);
 		conditionLock.acquire();
 		Machine.interrupt().restore(intStatus);
@@ -217,14 +219,42 @@ public class Condition2 {
 		Lock lock = new Lock();
 		Condition2 cv = new Condition2(lock);
 
+//		lock.acquire();
+//		long t0 = Machine.timer().getTime();
+//		System.out.println(KThread.currentThread().getName() + " sleeping");
+//		// no other thread will wake us up, so we should time out
+//		cv.sleepFor(2000);
+//		long t1 = Machine.timer().getTime();
+//		System.out.println(KThread.currentThread().getName() + " woke up, slept for " + (t1 - t0) + " ticks");
+//		lock.release();
+		
+		KThread war = new KThread(new Runnable() {
+			public void run() {
+				ThreadedKernel.alarm.waitUntil(10*100000);
+				System.out.println("warrior");
+			}
+		});
+		KThread wiz = new KThread(new Runnable() {
+			public void run() {
+				ThreadedKernel.alarm.waitUntil(10*100);
+				System.out.println("wizard");
+			}
+		});
+		KThread thi = new KThread(new Runnable() {
+			public void run() {
+				ThreadedKernel.alarm.waitUntil(10*1000);
+				System.out.println("thief");
+			}
+		});
 		lock.acquire();
-		long t0 = Machine.timer().getTime();
-		System.out.println(KThread.currentThread().getName() + " sleeping");
-		// no other thread will wake us up, so we should time out
-		cv.sleepFor(2000);
-		long t1 = Machine.timer().getTime();
-		System.out.println(KThread.currentThread().getName() + " woke up, slept for " + (t1 - t0) + " ticks");
+		war.fork();
+		wiz.fork();
+		thi.fork();
+		war.join();
+		wiz.join();
+		thi.join();
 		lock.release();
+		
 	}
 
 }
