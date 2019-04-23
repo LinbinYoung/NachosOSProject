@@ -294,9 +294,10 @@ public class KThread {
 		// If this thread is already finished return immediately
 		if (this.status == statusFinished) return;
 
-		this.joinThread = currentThread;
 		Machine.interrupt().disable();
+		this.joinThread = currentThread;
 		currentThread.sleep();
+		Machine.interrupt().enable();
 		
 		return;
 	}

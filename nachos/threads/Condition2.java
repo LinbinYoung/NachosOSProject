@@ -25,6 +25,8 @@ public class Condition2 {
 	 */
 	public Condition2(Lock conditionLock) {
 		this.conditionLock = conditionLock;
+		this.waitingQueue = new Vector<KThread>();
+		this.alarm = new Alarm();
 	}
 
 	/**
@@ -55,7 +57,9 @@ public class Condition2 {
 		Machine.interrupt().disable();
 
 		if (!waitingQueue.isEmpty()) {
-			waitingQueue.remove(0).ready();
+			KThread t = waitingQueue.remove(0);
+			t.ready();
+			this.alarm.cancel(t);
 		}
 
 		Machine.interrupt().enable();
@@ -186,16 +190,16 @@ public class Condition2 {
 	public void sleepFor(long timeout) {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
 		
-		conditionLock.release();
 		Machine.interrupt().disable();
-		waitingQueue.addElement(KThread.currentThread());
-		// let the thread go sleep
-		KThread.currentThread().sleep();
+		conditionLock.release();
 		
-		if ()
 		
-		Machine.interrupt().enable();
+		this.alarm.waitUntil(timeout);
+		waitingQueue.addElement(KThread.currentThread());		
+
+		
 		conditionLock.acquire();
+		Machine.interrupt().enable();
 		return;
 
 	}
@@ -216,5 +220,6 @@ public class Condition2 {
 
 
 	private Lock conditionLock;
-	private Vector<KThread> waitingQueue = new Vector<KThread>();
+	private Vector<KThread> waitingQueue;
+	private Alarm alarm;
 }

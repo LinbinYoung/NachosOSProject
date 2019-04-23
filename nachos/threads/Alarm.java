@@ -16,7 +16,7 @@ public class Alarm {
 	 */
 	public Alarm() {
 		//Initialized the t_queue in the constructor
-		this.t_queue = new LinkedList<>();
+		this.t_queue = new PriorityQueue<Thread_with_time>();
 		Machine.timer().setInterruptHandler(new Runnable() {
 			public void run() {
 				timerInterrupt();
@@ -31,13 +31,23 @@ public class Alarm {
 	 * should be run.
 	 */
 	public void timerInterrupt() {
-		KThread.currentThread().yield();
-		long cur_systime = Machine.timer().getTime();
-		while (!this.t_queue.isEmpty() && this.t_queue.peek().waittime <= cur_systime){
-			Thread_with_time instan = this.t_queue.poll();
-			KThread t_ch = instan.thread;
-			t_ch.ready();
+		Machine.interrupt().disable();
+		long curTime = Machine.timer().getTime();
+		while (!this.t_queue.isEmpty() && this.t_queue.peek().waittime <= curTime) {
+			
+			Thread_with_time t = this.t_queue.poll();
+			t.thread.ready();
 		}
+		Machine.interrupt().enable();
+		KThread.currentThread().yield();
+		
+//		long cur_systime = Machine.timer().getTime();
+//		while (!this.t_queue.isEmpty() && this.t_queue.peek().waittime <= cur_systime){
+//			Thread_with_time instan = this.t_queue.poll();
+//			KThread t_ch = instan.thread;
+//			t_ch.ready();
+//		}
+		
 	}
 
 	/**
@@ -58,10 +68,11 @@ public class Alarm {
 //         long wakeTime = Machine.timer().getTime() + x;
 //         while (wakeTime > Machine.timer().getTime())
 //         KThread.yield();
+		if (x <= 0) return;
+		Machine.interrupt().disable();
 		long waketime = Machine.timer().getTime() + x;
 		this.t_queue.add(new Thread_with_time(KThread.currentThread(), waketime));
-		Machine.interrupt().disable();
-		KThread.sleep();
+		KThread.currentThread().sleep();
 		
 		Machine.interrupt().enable();
 	}
@@ -88,7 +99,17 @@ public class Alarm {
 	 * @param thread the thread whose timer should be cancelled.
 	 */
      public boolean cancel(KThread thread) {
-		return false;
+    	 
+    	 Machine.interrupt().disable();
+    	 for (Thread_with_time t:this.t_queue) {
+    		 
+    		 if (t.thread == thread)  {
+    			 Machine.interrupt().enable();
+    			 return this.t_queue.remove(t);
+    		 }
+    	 }
+    	 Machine.interrupt().enable();
+    	 return false;
 	 }
      
  	/**
@@ -102,5 +123,12 @@ public class Alarm {
     		 this.waittime = waittime;
     	 }
      }
-     private Queue<Thread_with_time> t_queue;
+     
+     private static PriorityQueue<Thread_with_time> t_queue = new PriorityQueue<>(new Comparator<Thread_with_time>() {
+ 		public int compare(Thread_with_time a, Thread_with_time b) {
+ 			if (a.waittime-b.waittime < 0) return -1;
+ 			else return 1;
+ 		}
+ 	});
+
 }
