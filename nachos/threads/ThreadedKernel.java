@@ -21,7 +21,6 @@ public class ThreadedKernel extends Kernel {
 		// set scheduler
 		String schedulerName = Config.getString("ThreadedKernel.scheduler");
 		scheduler = (Scheduler) Lib.constructObject(schedulerName);
-
 		// set fileSystem
 		String fileSystemName = Config.getString("ThreadedKernel.fileSystem");
 		if (fileSystemName != null)
@@ -48,6 +47,8 @@ public class ThreadedKernel extends Kernel {
 		Semaphore.selfTest();
 		SynchList.selfTest();
 		alarm.alarmTest1();
+		dummy4.selfTest1();
+		sqm.selfTest();
 		if (Machine.bank() != null) {
 			ElevatorBank.selfTest();
 		}
@@ -91,4 +92,8 @@ public class ThreadedKernel extends Kernel {
 	private static ElevatorController dummy7 = null;
 
     private static GameMatch dummy8 = null;
+    
+    private static Semaphore smp = null;
+    
+    private static SquadMatch sqm = null;
 }

@@ -1,7 +1,6 @@
 package nachos.threads;
 
 import nachos.machine.*;
-
 import java.util.LinkedList;
 
 /**
@@ -14,7 +13,7 @@ import java.util.LinkedList;
  * <p>
  * <ul>
  * 
- * <li><tt>sleep()</tt>: atomically release the lock and relinkquish the CPU
+ * <li><tt>sleep()</tt>: atomically release the lock and relinquish the CPU
  * until woken; then reacquire the lock.
  * 
  * <li><tt>wake()</tt>: wake up a single thread sleeping in this condition
@@ -60,10 +59,12 @@ public class Condition {
 	 */
 	public Condition(Lock conditionLock) {
 		this.conditionLock = conditionLock;
-
 		waitQueue = new LinkedList<Semaphore>();
 	}
 
+	public int getSize() {
+		return this.waitQueue.size();
+	}
 	/**
 	 * Atomically release the associated lock and go to sleep on this condition
 	 * variable until another thread wakes it using <tt>wake()</tt>. The current
@@ -76,12 +77,11 @@ public class Condition {
 	 * semaphore, so thre is no chance the sleeper will miss the wake-up, even
 	 * though the lock is released before caling <tt>P()</tt>.
 	 */
+	
 	public void sleep() {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
-
 		Semaphore waiter = new Semaphore(0);
 		waitQueue.add(waiter);
-
 		conditionLock.release();
 		waiter.P();
 		conditionLock.acquire();

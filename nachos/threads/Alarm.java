@@ -30,7 +30,7 @@ public class Alarm {
 	 * thread to yield, forcing a context switch if there is another thread that
 	 * should be run.
 	 */
-	public void timerInterrupt() {
+	public void timerInterrupt(){
 		KThread.currentThread().yield();
 		long cur_systime = Machine.timer().getTime();
 		while (!this.t_queue.isEmpty() && this.t_queue.peek().waittime <= cur_systime){
@@ -60,8 +60,9 @@ public class Alarm {
 //         KThread.yield();
 		long waketime = Machine.timer().getTime() + x;
 		this.t_queue.add(new Thread_with_time(KThread.currentThread(), waketime));
-		Machine.interrupt().disable();
+		boolean intStatus = Machine.interrupt().disable();
 		KThread.sleep();
+		Machine.interrupt().restore(intStatus);
 	}
     /**
      * Add self Test to the alarm class 
@@ -85,13 +86,25 @@ public class Alarm {
 	 * <p>
 	 * @param thread the thread whose timer should be cancelled.
 	 */
-     public boolean cancel(KThread thread) {
+     public boolean cancel(KThread threadtest) {
+    	 for (Thread_with_time elem : t_queue) {
+    		if (elem.thread == threadtest) {
+    			boolean intStatus = Machine.interrupt().disable();
+    			threadtest.sleep();
+    	    	Machine.interrupt().restore(intStatus);
+    	    	return true;
+    		}
+    	}
 		return false;
 	 }
      
  	/**
  	 * Initialized data structure here
  	 */
+     public void set_Queue(KThread thread, long waittime) {
+    	 this.t_queue.add(new Thread_with_time(thread, waittime));
+     }
+     
      class Thread_with_time{
     	 KThread thread;
     	 long waittime;
@@ -100,5 +113,6 @@ public class Alarm {
     		 this.waittime = waittime;
     	 }
      }
+     
      private Queue<Thread_with_time> t_queue;
 }

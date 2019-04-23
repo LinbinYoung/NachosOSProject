@@ -108,9 +108,7 @@ public final class Machine {
 	 */
 	public static String[] getCommandLineArguments() {
 		String[] result = new String[args.length];
-
 		System.arraycopy(args, 0, result, 0, args.length);
-
 		return result;
 	}
 
