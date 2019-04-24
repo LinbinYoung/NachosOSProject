@@ -89,6 +89,9 @@ public class Condition2 {
     	boolean status = Machine.interrupt().disable();
     	this.waitqueue.add(KThread.currentThread());
     	alarm.waitUntil(timeout);
+    	System.out.println("Outside Thread" + ":" + alarm.cancel(KThread.currentThread()));
+    	System.out.println("Outside Thread" + ":" + this.waitqueue.contains(KThread.currentThread()));
+    	this.waitqueue.remove(KThread.currentThread());
     	conditionLock.acquire();
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
 	}
@@ -109,7 +112,7 @@ public class Condition2 {
         private static Condition2 cv;
 
         private static class Interlocker implements Runnable {
-            public void run () {
+            public void run(){
                 lock.acquire();
                 for (int i = 0; i < 10; i++) {
                     System.out.println(KThread.currentThread().getName());
@@ -120,7 +123,7 @@ public class Condition2 {
             }
         }
 
-        public InterlockTest () {
+        public InterlockTest(){
             lock = new Lock();
             cv = new Condition2(lock);
             KThread ping = new KThread(new Interlocker());
@@ -131,6 +134,28 @@ public class Condition2 {
             pong.fork();
             ping.join();
             // for (int i = 0; i < 50; i++) { KThread.currentThread().yield(); }
+        }
+    }
+    
+    private static class sleepForTest2{
+    	private static Lock lock;
+        private static Condition2 cv;
+        
+        private static class Interlocker implements Runnable {
+            public void run(){
+                lock.acquire();
+                cv.sleepFor(100);
+                System.out.println("Inside Thread" + ":" + cv.alarm.cancel(KThread.currentThread()));
+                System.out.println("Inside Thread" + ":" + cv.waitqueue.contains(KThread.currentThread()));
+                lock.release();
+            }
+        }
+        public sleepForTest2() {
+        	lock = new Lock();
+        	cv = new Condition2(lock);
+        	KThread testTh = new KThread(new Interlocker());
+        	testTh.fork();
+        	testTh.join();
         }
     }
     
@@ -149,7 +174,8 @@ public class Condition2 {
 
     public static void selfTest1() {
     	new InterlockTest();
-    	sleepForTest1();
+    	//sleepForTest1();
+    	new sleepForTest2();
     }
     
 }

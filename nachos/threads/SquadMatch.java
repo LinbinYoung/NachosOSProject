@@ -182,7 +182,7 @@ public class SquadMatch {
     		    System.out.println ("w3 matched");
     		}
     	    });
-    	w1.setName("w3");
+    	w3.setName("w3");
 
     	// Run the threads.
     	w1.fork();
@@ -194,11 +194,11 @@ public class SquadMatch {
     	w3.fork();
 
     	// if you have join implemented, use the following:
-//    	w1.join();
-//    	z1.join();
-//    	t1.join();
-//    	w2.join();
-//    	t2.join();
+    	w1.join();
+    	z1.join();
+    	t1.join();
+    	w2.join();
+    	t2.join();
 //    	w3.join();
 //    	z2.join();
     	// if you do not have join implemented, use yield to allow

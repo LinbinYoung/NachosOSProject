@@ -110,7 +110,7 @@ public class Alarm {
     	test1.fork();
     	test2.fork();
     	test3.fork();
-    	//test3.join();
+    	test3.join();
     	System.out.println("");
     }
      /**
