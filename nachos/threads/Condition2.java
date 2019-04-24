@@ -50,6 +50,7 @@ public class Condition2 {
 	 * thread must hold the associated lock.
 	 */
 	public void wake() {
+//		common sleep queue
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
 
 		boolean intStatus = Machine.interrupt().disable();
@@ -85,8 +86,10 @@ public class Condition2 {
 		boolean intStatus = Machine.interrupt().disable();
 		conditionLock.release();
 //		KThread.yield();
-		this.queue.offer(KThread.currentThread());
+		KThread sleepThread = KThread.currentThread();
+		this.queue.offer(sleepThread);
 		alarm.waitUntil(timeout);
+		this.queue.remove(sleepThread);
 		conditionLock.acquire();
 		Machine.interrupt().restore(intStatus);
 	}
