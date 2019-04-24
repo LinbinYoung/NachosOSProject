@@ -18,15 +18,13 @@ public class SquadMatch {
      */
 	
     public SquadMatch () {
-    	this.map = new HashMap<>();
     	this.ConditionLock = new Lock();
-    	this.cv_1 = new Condition(this.ConditionLock);
-    	this.cv_2 = new Condition(this.ConditionLock);
-    	this.cv_3 = new Condition(this.ConditionLock);
-    	this.map.put("Warrier", this.cv_1);
-    	this.map.put("Wizard", this.cv_2);
-    	this.map.put("Thief", this.cv_3);
-    	
+    	this.cv_wa = new Condition(this.ConditionLock);
+    	this.cv_wi = new Condition(this.ConditionLock);
+    	this.cv_th = new Condition(this.ConditionLock);
+    	this.warrier = 0;
+    	this.wizard = 0;
+    	this.thief = 0;
     }
 
     /**
@@ -43,17 +41,20 @@ public class SquadMatch {
     	 * To Check whether Wizard and Thief in wait queue
     	 * if not, sleep the current method
     	 */
+    	boolean intStatus = Machine.interrupt().disable();
     	this.ConditionLock.acquire();
-    	if (this.map.get("Wizard").getSize() != 0 && this.map.get("Thief").getSize() != 0) {
+    	if (this.wizard != 0 && this.thief != 0) {
     		// we need to wake up wizard and Thief then
-    		this.map.get("Wizard").wake();
-    		this.map.get("Thief").wake();
-    		this.map.get("Warrier").wake();
+    		this.wizard --;
+    		this.thief --;
+    		cv_wi.wake();
+    		cv_th.wake();
     	}else {
-    		Condition temp = this.map.get("Warrier");
-    		temp.sleep();
+    		this.warrier ++;
+    		cv_wa.sleep();
     	}
     	this.ConditionLock.release();
+    	Machine.interrupt().restore(intStatus);
     }
 
     /**
@@ -70,18 +71,20 @@ public class SquadMatch {
     	 * To Check whether Warrier and Thief in wait queue
     	 * if not, sleep the current method
     	 */
+    	boolean intStatus = Machine.interrupt().disable();
     	this.ConditionLock.acquire();
-    	if (this.map.get("Warrier").getSize() != 0 && this.map.get("Thief").getSize() != 0) {
+    	if (this.warrier != 0 && this.thief != 0) {
     		// we need to wake up wizard and Thief then
-    		this.map.get("Wizard").wake();
-    		this.map.get("Thief").wake();
-    		this.map.get("Warrier").wake();
+    		this.thief --;
+    		this.warrier --;
+    		cv_wa.wake();
+    		cv_th.wake();
     	}else {
-    		Condition temp = this.map.get("Wizard");
-    		temp.sleep();
+    		this.wizard ++;
+    		cv_wi.sleep();
     	}
     	this.ConditionLock.release();
-
+    	Machine.interrupt().restore(intStatus);
     }
 
     /**
@@ -98,29 +101,32 @@ public class SquadMatch {
     	 * To Check whether Warrier and Wizard in wait queue
     	 * if not, sleep the current method
     	 */
+    	boolean intStatus = Machine.interrupt().disable();
     	this.ConditionLock.acquire();
-    	if (this.map.get("Warrier").getSize() != 0 && this.map.get("Wizard").getSize() != 0) {
+    	if (this.warrier != 0 && this.wizard != 0) {
     		// we need to wake up wizard and Thief then
-    		this.map.get("Wizard").wake();
-    		this.map.get("Thief").wake();
-    		this.map.get("Warrier").wake();
+    		this.wizard --;
+    		this.warrier --;
+    		cv_wa.wake();
+    		cv_wi.wake();
     	}else {
-    		Condition temp = this.map.get("Thief");
-    		temp.sleep();
+    		this.thief ++;
+    		cv_th.sleep();
     	}
     	this.ConditionLock.release();
-    	
+    	Machine.interrupt().restore(intStatus);
     }
     
-    private static HashMap<String, Condition> map;
-    private static Condition cv_1;
-    private static Condition cv_2;
-    private static Condition cv_3;
+    private static Condition cv_wa;
+    private static Condition cv_wi;
+    private static Condition cv_th;
     private static Lock ConditionLock;
+    private static int warrier;
+    private static int wizard;
+    private static int thief;
     
     public static void squadTest1 () {
     	final SquadMatch match = new SquadMatch();
-
     	// Instantiate the threads
     	KThread w1 = new KThread( new Runnable () {
     		public void run() {
@@ -169,6 +175,14 @@ public class SquadMatch {
     		}
     	    });
     	w1.setName("w2");
+    	
+    	KThread w3 = new KThread( new Runnable () {
+    		public void run() {
+    		    match.Warrier();
+    		    System.out.println ("w3 matched");
+    		}
+    	    });
+    	w1.setName("w3");
 
     	// Run the threads.
     	w1.fork();
@@ -177,11 +191,16 @@ public class SquadMatch {
     	t2.fork();
     	z2.fork();
     	w2.fork();
+    	w3.fork();
 
     	// if you have join implemented, use the following:
-    	w1.join();
-    	z1.join();
-    	t1.join();
+//    	w1.join();
+//    	z1.join();
+//    	t1.join();
+//    	w2.join();
+//    	t2.join();
+//    	w3.join();
+//    	z2.join();
     	// if you do not have join implemented, use yield to allow
     	// time to pass...10 yields should be enough
 //    	for (int i = 0; i < 10; i++) {

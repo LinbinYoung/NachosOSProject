@@ -14,9 +14,17 @@ public class Alarm {
 	 * <p>
 	 * <b>Note</b>: Nachos will not function correctly with more than one alarm.
 	 */
+	
 	public Alarm() {
 		//Initialized the t_queue in the constructor
-		this.t_queue = new LinkedList<>();
+		this.t_queue = new PriorityQueue<>(new Comparator<Thread_with_time>() {
+			@Override
+			public int compare(Thread_with_time a1, Thread_with_time a2) {
+				if (a1.waittime > a2.waittime) return 1;
+				else if (a1.waittime < a2.waittime) return -1;
+				else return 0;
+			}
+		});
 		Machine.timer().setInterruptHandler(new Runnable() {
 			public void run() {
 				timerInterrupt();
@@ -31,13 +39,13 @@ public class Alarm {
 	 * should be run.
 	 */
 	public void timerInterrupt(){
-		KThread.currentThread().yield();
 		long cur_systime = Machine.timer().getTime();
+		boolean intStatus = Machine.interrupt().disable();
 		while (!this.t_queue.isEmpty() && this.t_queue.peek().waittime <= cur_systime){
-			Thread_with_time instan = this.t_queue.poll();
-			KThread t_ch = instan.thread;
-			t_ch.ready();
+			this.t_queue.poll().thread.ready();
 		}
+		Machine.interrupt().restore(intStatus);
+		KThread.currentThread().yield();
 	}
 
 	/**
@@ -55,9 +63,7 @@ public class Alarm {
 
 	public void waitUntil(long x) {
 		// for now, cheat just to get something working (busy waiting is bad)
-//         long wakeTime = Machine.timer().getTime() + x;
-//         while (wakeTime > Machine.timer().getTime())
-//         KThread.yield();
+		if (x <= 0) return;
 		long waketime = Machine.timer().getTime() + x;
 		this.t_queue.add(new Thread_with_time(KThread.currentThread(), waketime));
 		boolean intStatus = Machine.interrupt().disable();
@@ -68,7 +74,7 @@ public class Alarm {
      * Add self Test to the alarm class 
     */
     public static void alarmTest1(){
-    	int durations[] = {1000, 10*1000, 100*1000};
+    	int durations[] = {10*1000, 1000, 100*1000};
     	long t0, t1;
     	for (int d : durations){
     		t0 = Machine.timer().getTime();
@@ -76,6 +82,36 @@ public class Alarm {
     		t1 = Machine.timer().getTime();
     		System.out.println ("alarmTest1: waited for " + (t1 - t0) + " ticks");
     	}
+    	System.out.println("\nMy own Test case for Q1 and Q2");
+    	System.out.println("test1 \ntest2 \ntest3(join) \n");
+    	KThread test1 = new KThread( new Runnable () {
+    		public void run() {
+    			ThreadedKernel.alarm.waitUntil(100);
+    		    System.out.println ("I am test1 sleep 100 ticks");
+    		}
+    	    });
+    	test1.setName("test1");
+    	
+    	KThread test2 = new KThread( new Runnable () {
+    		public void run() {
+    			ThreadedKernel.alarm.waitUntil(30);
+    		    System.out.println ("I am test2 sleep 30 ticks");
+    		}
+    	    });
+    	test2.setName("test2");
+    	
+    	KThread test3 = new KThread( new Runnable () {
+    		public void run() {
+    			ThreadedKernel.alarm.waitUntil(10);
+    		    System.out.println ("I am test3 sleep 10 ticks");
+    		}
+    	    });
+    	test3.setName("test3");
+    	test1.fork();
+    	test2.fork();
+    	test3.fork();
+    	//test3.join();
+    	System.out.println("");
     }
      /**
 	 * Cancel any timer set by <i>thread</i>, effectively waking
@@ -87,23 +123,20 @@ public class Alarm {
 	 * @param thread the thread whose timer should be cancelled.
 	 */
      public boolean cancel(KThread threadtest) {
-    	 for (Thread_with_time elem : t_queue) {
-    		if (elem.thread == threadtest) {
-    			boolean intStatus = Machine.interrupt().disable();
-    			threadtest.sleep();
-    	    	Machine.interrupt().restore(intStatus);
-    	    	return true;
-    		}
-    	}
-		return false;
+    	 boolean intStatus = Machine.interrupt().disable();
+    	 for (Thread_with_time elem : this.t_queue) {
+    		 if (elem.thread == threadtest) {
+    			 this.t_queue.remove(elem);
+    			 Machine.interrupt().restore(intStatus);
+    			 return true;
+    		 }
+    	 }
+    	 Machine.interrupt().restore(intStatus);
+    	 return false;
 	 }
-     
  	/**
  	 * Initialized data structure here
  	 */
-     public void set_Queue(KThread thread, long waittime) {
-    	 this.t_queue.add(new Thread_with_time(thread, waittime));
-     }
      
      class Thread_with_time{
     	 KThread thread;
@@ -114,5 +147,5 @@ public class Alarm {
     	 }
      }
      
-     private Queue<Thread_with_time> t_queue;
+     private PriorityQueue<Thread_with_time> t_queue;
 }

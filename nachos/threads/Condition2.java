@@ -41,7 +41,6 @@ public class Condition2 {
 		conditionLock.release();
 		this.waitqueue.add(KThread.currentThread());
 		KThread.sleep();
-//		Machine.interrupt().restore(status);
 		conditionLock.acquire();
 		Machine.interrupt().restore(status);
 	}
@@ -53,12 +52,13 @@ public class Condition2 {
 
 	public void wake() {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
+		boolean status = Machine.interrupt().disable();
 		if (!this.waitqueue.isEmpty()) {
-			boolean status = Machine.interrupt().disable();
 			KThread stp = this.waitqueue.removeFirst();
 			stp.ready();
-			Machine.interrupt().restore(status);
+			alarm.cancel(stp);
 		}
+		Machine.interrupt().restore(status);
 	}
 
 	/**
@@ -68,9 +68,11 @@ public class Condition2 {
 
 	public void wakeAll() {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
+		boolean status = Machine.interrupt().disable();
 		while (!this.waitqueue.isEmpty()) {
 			wake();
 		}
+		Machine.interrupt().restore(status);
 	}
 
      /**
@@ -85,9 +87,8 @@ public class Condition2 {
     public void sleepFor(long timeout) {
     	conditionLock.release();
     	boolean status = Machine.interrupt().disable();
-    	long waketime = Machine.timer().getTime() + timeout;
-    	alarm.set_Queue(KThread.currentThread(), waketime);
-    	alarm.cancel(KThread.currentThread());
+    	this.waitqueue.add(KThread.currentThread());
+    	alarm.waitUntil(timeout);
     	conditionLock.acquire();
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
 	}
@@ -122,25 +123,12 @@ public class Condition2 {
         public InterlockTest () {
             lock = new Lock();
             cv = new Condition2(lock);
-
             KThread ping = new KThread(new Interlocker());
             ping.setName("ping");
             KThread pong = new KThread(new Interlocker());
             pong.setName("pong");
-
             ping.fork();
             pong.fork();
-
-            // We need to wait for ping to finish, and the proper way
-            // to do so is to join on ping.  (Note that, when ping is
-            // done, pong is sleeping on the condition variable; if we
-            // were also to join on pong, we would block forever.)
-            // For this to work, join must be implemented.  If you
-            // have not implemented join yet, then comment out the
-            // call to join and instead uncomment the loop with
-            // yields; the loop has the same effect, but is a kludgy
-            // way to do it.
-            
             ping.join();
             // for (int i = 0; i < 50; i++) { KThread.currentThread().yield(); }
         }
@@ -153,7 +141,7 @@ public class Condition2 {
     	long t0 = Machine.timer().getTime();
     	System.out.println (KThread.currentThread().getName() + " sleeping");
     	// no other thread will wake us up, so we should time out
-    	cv.sleepFor(2300);
+    	cv.sleepFor(2000);
     	long t1 = Machine.timer().getTime();
     	System.out.println (KThread.currentThread().getName() + " woke up, slept for " + (t1 - t0) + " ticks");
     	lock.release();

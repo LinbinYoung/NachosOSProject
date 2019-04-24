@@ -62,9 +62,6 @@ public class Condition {
 		waitQueue = new LinkedList<Semaphore>();
 	}
 
-	public int getSize() {
-		return this.waitQueue.size();
-	}
 	/**
 	 * Atomically release the associated lock and go to sleep on this condition
 	 * variable until another thread wakes it using <tt>wake()</tt>. The current
