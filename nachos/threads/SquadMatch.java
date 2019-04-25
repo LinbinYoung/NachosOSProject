@@ -36,7 +36,7 @@ public class SquadMatch {
      * be assigned to only one match.
      */
     
-    public void Warrier () {
+    public void warrior () {
     	/*
     	 * To Check whether Wizard and Thief in wait queue
     	 * if not, sleep the current method
@@ -66,7 +66,7 @@ public class SquadMatch {
      * be assigned to only one match.
      */
     
-    public void Wizard () {
+    public void wizard () {
     	/*
     	 * To Check whether Warrier and Thief in wait queue
     	 * if not, sleep the current method
@@ -96,7 +96,7 @@ public class SquadMatch {
      * be assigned to only one match.
      */
     
-    public void Thief () {
+    public void thief () {
     	/*
     	 * To Check whether Warrier and Wizard in wait queue
     	 * if not, sleep the current method
@@ -130,7 +130,7 @@ public class SquadMatch {
     	// Instantiate the threads
     	KThread w1 = new KThread( new Runnable () {
     		public void run() {
-    		    match.Warrier();
+    		    match.warrior();
     		    System.out.println ("w1 matched");
     		}
     	    });
@@ -138,7 +138,7 @@ public class SquadMatch {
 
     	KThread z1 = new KThread( new Runnable () {
     		public void run() {
-    		    match.Wizard();
+    		    match.wizard();
     		    System.out.println ("z1 matched");
     		}
     	    });
@@ -146,7 +146,7 @@ public class SquadMatch {
 
     	KThread t1 = new KThread( new Runnable () {
     		public void run() {
-    		    match.Thief();
+    		    match.thief();
     		    System.out.println ("t1 matched");
     		}
     	    });
@@ -154,7 +154,7 @@ public class SquadMatch {
     	
     	KThread t2 = new KThread( new Runnable () {
     		public void run() {
-    		    match.Thief();
+    		    match.thief();
     		    System.out.println ("t2 matched");
     		}
     	    });
@@ -162,7 +162,7 @@ public class SquadMatch {
     	
     	KThread z2 = new KThread( new Runnable () {
     		public void run() {
-    		    match.Wizard();
+    		    match.wizard();
     		    System.out.println ("z2 matched");
     		}
     	    });
@@ -170,7 +170,7 @@ public class SquadMatch {
     	
     	KThread w2 = new KThread( new Runnable () {
     		public void run() {
-    		    match.Warrier();
+    		    match.warrior();
     		    System.out.println ("w2 matched");
     		}
     	    });
@@ -178,7 +178,7 @@ public class SquadMatch {
     	
     	KThread w3 = new KThread( new Runnable () {
     		public void run() {
-    		    match.Warrier();
+    		    match.warrior();
     		    System.out.println ("w3 matched");
     		}
     	    });
