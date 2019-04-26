@@ -45,22 +45,18 @@ public class SquadMatch {
 	 */
 	public void warrior() {
 		boolean intStatus = Machine.interrupt().disable();
+		if (!lock.isHeldByCurrentThread()) lock.acquire();
 		if (this.wizCount >= 1 && this.thiCount >= 1) {
 			this.wizCount--;
 			this.thiCount--;
-			if (!lock.isHeldByCurrentThread())
-				lock.acquire();
 			wizCond.wake();
 			thiCond.wake();
 //			KThread.yield();
-			lock.release();
 		} else {
 			this.warCount++;
-			if (!lock.isHeldByCurrentThread())
-				lock.acquire();
 			this.warCond.sleep();
-			lock.release();
 		}
+		lock.release();
 		Machine.interrupt().restore(intStatus);
 	}
 
@@ -74,24 +70,18 @@ public class SquadMatch {
 	public void wizard() {
 		boolean intStatus = Machine.interrupt().disable();
 //		KThread kth = new KThread(wizard);
-
+		if (!lock.isHeldByCurrentThread()) lock.acquire();
 		if (this.warCount >= 1 && this.thiCount >= 1) {
 //			System.out.println("Debugging wiz 001");
 			this.warCount--;
 			this.thiCount--;
-			if (!lock.isHeldByCurrentThread())
-				lock.acquire();
 			warCond.wake();
 			thiCond.wake();
-//			KThread.yield();
-			lock.release();
 		} else {
 			this.wizCount++;
-			if (!lock.isHeldByCurrentThread())
-				lock.acquire();
 			this.wizCond.sleep();
-			lock.release();
 		}
+		lock.release();
 		Machine.interrupt().restore(intStatus);
 	}
 
@@ -104,22 +94,19 @@ public class SquadMatch {
 	 */
 	public void thief() {
 		boolean intStatus = Machine.interrupt().disable();
+		if (!lock.isHeldByCurrentThread()) lock.acquire();
 		if (this.warCount >= 1 && this.wizCount >= 1) {
 			this.warCount--;
 			this.wizCount--;
-			if (!lock.isHeldByCurrentThread())
-				lock.acquire();
 			warCond.wake();
 			wizCond.wake();
 //			KThread.yield();
-			lock.release();
+
 		} else {
 			this.thiCount++;
-			if (!lock.isHeldByCurrentThread())
-				lock.acquire();
 			this.thiCond.sleep();
-			lock.release();
 		}
+		lock.release();
 		Machine.interrupt().restore(intStatus);
 	}
 

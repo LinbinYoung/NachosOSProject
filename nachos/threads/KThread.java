@@ -286,12 +286,10 @@ public class KThread {
 
 		Lib.assertTrue(this != currentThread);
 //		Lib.assertTrue(this.toBeJoined != null);
-
+		if (this.status == KThread.statusFinished) return;
 		boolean intStatus = Machine.interrupt().disable();
-		if (this.status != KThread.statusFinished) {
-			toBeJoined = KThread.currentThread();
-			KThread.sleep();
-		}
+		toBeJoined = KThread.currentThread();
+		KThread.sleep();
 		Machine.interrupt().restore(intStatus);
 	}
 

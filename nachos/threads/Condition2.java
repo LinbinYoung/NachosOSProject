@@ -55,7 +55,7 @@ public class Condition2 {
 
 		boolean intStatus = Machine.interrupt().disable();
 		if (!this.queue.isEmpty()) {
-			this.alarm.cancel(KThread.currentThread());
+			this.alarm.cancel(this.queue.peek());
 			this.queue.poll().ready();
 		}
 		Machine.interrupt().restore(intStatus);
@@ -68,9 +68,10 @@ public class Condition2 {
 	 */
 	public void wakeAll() {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
-
+		boolean intStatus = Machine.interrupt().disable();
 		while (!this.queue.isEmpty())
 			wake();
+		Machine.interrupt().restore(intStatus);
 
 	}
 

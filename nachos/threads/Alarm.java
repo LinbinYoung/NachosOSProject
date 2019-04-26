@@ -116,9 +116,14 @@ public class Alarm {
 	 * @param thread the thread whose timer should be cancelled.
 	 */
 	public boolean cancel(KThread thread) {
+		boolean intStatus = Machine.interrupt().disable();
 		for (Thread_with_time kth : Alarm.t_queue) {
-			if(kth.thread == thread) return Alarm.t_queue.remove(kth);
+			if(kth.thread == thread) {
+				Machine.interrupt().restore(intStatus);
+				return Alarm.t_queue.remove(kth);
+			}
 		}
+		Machine.interrupt().restore(intStatus);
 		return false;
 	}
 
