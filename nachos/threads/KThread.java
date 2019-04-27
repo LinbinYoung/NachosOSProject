@@ -199,10 +199,12 @@ public class KThread {
 		Machine.autoGrader().finishingCurrentThread();
 		Lib.assertTrue(toBeDestroyed == null);
 		toBeDestroyed = currentThread;
-		if (currentThread.joinThread != null) {
-			currentThread.joinThread.ready();
-		}
 		currentThread.status = statusFinished;
+		if (KThread.currentThread().joinThread != null) {
+			KThread temp = KThread.currentThread().joinThread;
+			KThread.currentThread().joinThread = null;
+			temp.ready();
+		}
 		sleep();
 	}
 
@@ -271,14 +273,15 @@ public class KThread {
 	
 	public void join(){
 		Lib.debug(dbgThread, "Joining to thread: " + toString());
-		Lib.assertTrue(this != currentThread);
-		if (this.status == statusFinished) {
-			return;
-		}
-		boolean status = Machine.interrupt().disable();
-		this.joinThread = currentThread;
-		currentThread.sleep();
-		Machine.interrupt().restore(status);
+		  Lib.assertTrue(this != currentThread);
+		  Lib.assertTrue(this.joinThread == null);
+		  if (this.status == statusFinished) {
+		   return;
+		  }
+		  boolean status = Machine.interrupt().disable();
+		  this.joinThread = currentThread;
+		  KThread.sleep();
+		  Machine.interrupt().restore(status);
 	}
 
 	/**
@@ -450,11 +453,8 @@ public class KThread {
 	 */
 	
 	private int status = statusNew;
-
 	private String name = "(unnamed thread)";
-
 	private Runnable target;
-
 	private TCB tcb;
 
 	/**

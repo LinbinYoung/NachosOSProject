@@ -70,7 +70,7 @@ public class Condition2 {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
 		boolean status = Machine.interrupt().disable();
 		while (!this.waitqueue.isEmpty()) {
-			wake();
+			this.wake();
 		}
 		Machine.interrupt().restore(status);
 	}
@@ -85,15 +85,16 @@ public class Condition2 {
 	 */
 	
     public void sleepFor(long timeout) {
-    	conditionLock.release();
+    	Lib.assertTrue(conditionLock.isHeldByCurrentThread());
     	boolean status = Machine.interrupt().disable();
+    	conditionLock.release();
     	this.waitqueue.add(KThread.currentThread());
     	alarm.waitUntil(timeout);
     	System.out.println("Outside Thread" + ":" + alarm.cancel(KThread.currentThread()));
     	System.out.println("Outside Thread" + ":" + this.waitqueue.contains(KThread.currentThread()));
     	this.waitqueue.remove(KThread.currentThread());
     	conditionLock.acquire();
-		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
+		Machine.interrupt().restore(status);
 	}
 
     private Lock conditionLock;

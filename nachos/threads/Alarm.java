@@ -63,10 +63,13 @@ public class Alarm {
 
 	public void waitUntil(long x) {
 		// for now, cheat just to get something working (busy waiting is bad)
-		if (x <= 0) return;
 		long waketime = Machine.timer().getTime() + x;
-		this.t_queue.add(new Thread_with_time(KThread.currentThread(), waketime));
 		boolean intStatus = Machine.interrupt().disable();
+		if (x <= 0) {
+			Machine.interrupt().restore(intStatus);
+			return;
+		}
+		this.t_queue.add(new Thread_with_time(KThread.currentThread(), waketime));
 		KThread.sleep();
 		Machine.interrupt().restore(intStatus);
 	}
