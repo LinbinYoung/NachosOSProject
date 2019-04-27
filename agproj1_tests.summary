@@ -16,3 +16,12 @@ PASS : CV2 (2) - Producer creates list [1,2,3,4,5], consumer pops first element 
 PASS : SLEEPFOR - Main thread will call sleepFor on a Condition2, then it should hit the time out and wake up.
 PASS : SQUADMATCH - Create one thread for each ability type (thief, warrior, wizard). Wait for all threads to exit after a squad is created.
 
+------[                  Fri Apr 26 18:10:03 2019                  ]------
+------[  Grading Commit: 2865c35a72ea1883542da642e5a8420d34cd6f18  ]------
+PASS : ALARM - Tests waitUntil to ensure it waits at least minimum amount of time
+PASS : JOIN - Tests join on completed child thread
+PASS : CV2 (1) - Strict interlock test. Ping and pong threads alternate.
+PASS : CV2 (2) - Producer creates list [1,2,3,4,5], consumer pops first element until list is empty.
+PASS : SLEEPFOR - Main thread will call sleepFor on a Condition2, then it should hit the time out and wake up.
+PASS : SQUADMATCH - Create one thread for each ability type (thief, warrior, wizard). Wait for all threads to exit after a squad is created.
+
