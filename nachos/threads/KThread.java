@@ -283,7 +283,7 @@ public class KThread {
 	 */
 	public void join() {
 		Lib.debug(dbgThread, "Joining to thread: " + toString());
-
+		Lib.assertTrue(this.toBeJoined == null);
 		Lib.assertTrue(this != currentThread);
 //		Lib.assertTrue(this.toBeJoined != null);
 		if (this.status == KThread.statusFinished) return;
@@ -409,6 +409,35 @@ public class KThread {
 
 		private int which;
 	}
+
+	private static class A implements Runnable {
+		A () {}
+		public void run () {
+			KThread t2 = new KThread (new B()).setName ("B");
+			System.out.println ("foo");
+			t2.fork ();
+			System.out.println ("far");
+			t2.join ();
+			System.out.println ("fum");
+		}
+	}
+
+	private static class B implements Runnable {
+		B () {}
+		public void run () {
+			System.out.println ("fie");
+		}
+	}
+
+	public static void selfTestHW() {
+		KThread t1 = new KThread (new A()).setName ("A");
+		System.out.println ("fee");
+		t1.fork ();
+		System.out.println ("foe");
+		t1.join ();
+		System.out.println ("fun");
+	}
+
 
 	/**
 	 * Tests whether this module is working.
