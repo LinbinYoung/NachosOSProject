@@ -28,6 +28,10 @@ public class UserProcess {
 		pageTable = new TranslationEntry[numPhysPages];
 		for (int i = 0; i < numPhysPages; i++)
 			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
+		
+		openFileTable = new OpenFile[16];
+		openFileTable[0] = UserKernel.console.openForReading();
+		openFileTable[1] = UserKernel.console.openForWriting();
 	}
 
 	/**
@@ -373,6 +377,93 @@ public class UserProcess {
 
 		return 0;
 	}
+	
+	
+	/**
+	 * Handle the open() system call.
+	 */
+	private int handleOpen(int viAddr) {
+		
+		String fileName = readVirtualMemoryString(viAddr, 256);
+		
+		if (fileName == null) return -1;
+		
+		
+		for (int i = 0; i < openFileTable.length; ++i){
+			if (openFileTable[i] == null) {
+				OpenFile o_instance = ThreadedKernel.fileSystem.open(fileName, false);
+				
+				// then the user process is not allowed to access the given file
+				if (o_instance == null) return -1;
+				
+				openFileTable[i] = o_instance;
+				return i;
+
+			}
+		}
+		
+		return -1;
+	}
+	
+	/**
+	 * Handle the create() system call.
+	 */
+	
+	private int handleCreate(int viAddr) {
+		
+		String fileName = readVirtualMemoryString(viAddr, 256);
+		
+		if (fileName == null) return -1;
+		
+		for (int i = 0; i < openFileTable.length; ++i){
+			if (openFileTable[i] == null) {
+				OpenFile o_instance = ThreadedKernel.fileSystem.open(fileName, true);
+				
+				// then the user process is not allowed to access the given file
+				if (o_instance == null) return -1;
+				
+				openFileTable[i] = o_instance;
+				return i;
+			}
+		}
+		
+		return -1;
+		
+	}
+	
+	/**
+	 * Handle the read() system call.
+	 */
+	
+	private int handleRead(int fileDescriptor, int viAddr, int count) {
+		
+		
+		// fileDescriptor is invalid
+		if (fileDescriptor <= 0 || fileDescriptor > 15)
+			return -1;
+		if (openFileTable[fileDescriptor] == null)
+			return -1;
+		if (count <= 0)
+			return 0;
+		
+		OpenFile of_instance = openFileTable[fileDescriptor];
+		int successRead = 0;
+		
+		while (count > 0) {
+			byte[] buffer = new byte[pageSize];
+			
+			int successRead += of_instance.read(buffer,0 ,pageSize);
+			//of_instance.read(buf, offset, length);
+			
+			count -= successRead;
+		}
+		
+		
+		return 0;
+		
+		
+	}
+	
 
 	private static final int syscallHalt = 0, syscallExit = 1, syscallExec = 2,
 			syscallJoin = 3, syscallCreate = 4, syscallOpen = 5,
@@ -446,6 +537,15 @@ public class UserProcess {
 			return handleHalt();
 		case syscallExit:
 			return handleExit(a0);
+		case syscallCreate:
+			return handleCreate(a0);
+			
+		case syscallOpen:
+			return handleOpen(a0);
+			
+		case syscallRead:
+			return handleRead(a0, a1, a2);
+		
 
 		default:
 			Lib.debug(dbgProcess, "Unknown syscall " + syscall);
@@ -504,4 +604,10 @@ public class UserProcess {
 	private static final int pageSize = Processor.pageSize;
 
 	private static final char dbgProcess = 'a';
+	
+	
+	//  file descriptor table
+	//  a file table size of 16, supporting up to 16 concurrently open files per process
+	private OpenFile[] openFileTable;
+	
 }
