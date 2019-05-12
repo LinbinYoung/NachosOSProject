@@ -399,7 +399,36 @@ public class KThread {
 		Lib.debug(dbgThread, "Enter KThread.selfTest");
 		new KThread(new PingTest(1)).setName("forked thread").fork();
 		new PingTest(0).run();
-		KThread.joinTest1();
+//		KThread.joinTest2();
+	}
+	
+	
+	private static class A implements Runnable {
+	    A () {}
+	    public void run () {
+	        KThread t2 = new KThread (new B()).setName ("B");
+		System.out.println ("foo");
+		t2.fork ();
+		System.out.println ("far");
+		t2.join ();
+		System.out.println ("fum");
+	    }
+	}
+	
+	private static class B implements Runnable {
+	    B () {}
+	    public void run () {
+	        System.out.println ("fie");
+	    }
+	}
+
+	private static void joinTest2() {
+		KThread t1 = new KThread (new A()).setName ("A");
+	    System.out.println ("fee");
+	    t1.fork ();
+	    System.out.println ("foe");
+	    t1.join ();
+	    System.out.println ("fun");
 	}
 	
     private static void joinTest1(){

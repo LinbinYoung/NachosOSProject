@@ -39,7 +39,7 @@ public final class Machine {
 			testDirectory = new File(testDirectoryName);
 		}
 		else {
-			// use ../test
+		// use ../test
 			testDirectory = new File(baseDirectory.getParentFile(), "test");
 		}
 

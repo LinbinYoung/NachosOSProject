@@ -15,6 +15,7 @@
 int
 main()
 {
+    println("LINBIN");
     halt();
     /* not reached */
 }
