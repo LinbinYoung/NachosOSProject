@@ -23,11 +23,19 @@ public class UserProcess {
 	/**
 	 * Allocate a new process.
 	 */
+	static int fileTableSize = 16;
+	protected String[] fileDescTable;
+
 	public UserProcess() {
 		int numPhysPages = Machine.processor().getNumPhysPages();
+		//todo: page table entries
 		pageTable = new TranslationEntry[numPhysPages];
 		for (int i = 0; i < numPhysPages; i++)
 			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
+
+		fileDescTable = new String[fileTableSize + 2];
+		fileDescTable[0] = UserKernel.console.openForReading().getName();
+		fileDescTable[1] = UserKernel.console.openForWriting().getName();
 	}
 
 	/**
@@ -118,7 +126,7 @@ public class UserProcess {
 	/**
 	 * Transfer data from this process's virtual memory to all of the specified
 	 * array. Same as <tt>readVirtualMemory(vaddr, data, 0, data.length)</tt>.
-	 * 
+	 *
 	 * @param vaddr the first byte of virtual memory to read.
 	 * @param data the array where the data will be stored.
 	 * @return the number of bytes successfully transferred.
@@ -346,6 +354,146 @@ public class UserProcess {
 		processor.writeRegister(Processor.regA0, argc);
 		processor.writeRegister(Processor.regA1, argv);
 	}
+
+	/** FILE MANAGEMENT SYSCALLS: creat, open, read, write, close, unlink
+	 *
+	 * A file descriptor is a small, non-negative integer that refers to a file on
+	 * disk or to a stream (such as console input, console output, and network
+	 * connections). A file descriptor can be passed to read() and write() to
+	 * read/write the corresponding file/stream. A file descriptor can also be
+	 * passed to close() to release the file descriptor and any associated
+	 * resources.
+	 */
+
+	/**
+	 * Attempt to open the named disk file, creating it if it does not exist,
+	 * and return a file descriptor that can be used to access the file.
+	 *
+	 * Note that creat() can only be used to create files on disk; creat() will
+	 * never return a file descriptor referring to a stream.
+	 *
+	 * Returns the new file descriptor, or -1 if an error occurred.
+	 */
+
+	/**
+	 * #mcip
+	 * Handle the create() system call
+	 */
+	private int handleCreat(char[] name){
+		if(name.length > 256) return -1;
+
+		int res = handleOpen(name);
+		if (res != -1) return res;
+
+		OpenFile file = ThreadedKernel.fileSystem.open(new String(name), false);
+		if (file == null) return -1;
+		else {
+			for (int i = 0; i<fileTableSize; i++) {
+				if (this.fileDescTable[i] == "") {
+					//todo: do we need to close the file?
+					//ThreadedKernel.fileSystem.close();
+					this.fileDescTable[i] = "" + name;
+					return i;
+				}
+			}
+		}
+		//TODO: what if there is no spot in array
+		return -1;
+	}
+
+	/**
+	 * Attempt to open the named file and return a file descriptor.
+	 *
+	 * Note that open() can only be used to open files on disk; open() will never
+	 * return a file descriptor referring to a stream.
+	 *
+	 * Returns the new file descriptor, or -1 if an error occurred.
+	 */
+	private int handleOpen(char[] name){
+		if(name.length > 256) return -1;
+
+		for (int i = 0; i<fileTableSize; i++){
+			if (this.fileDescTable[i] == ""+name) {
+				OpenFile file = ThreadedKernel.fileSystem.open(new String(name), false);
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	/**
+	 * Attempt to read up to count bytes into buffer from the file or stream
+	 * referred to by fileDescriptor.
+	 *
+	 * On success, the number of bytes read is returned. If the file descriptor
+	 * refers to a file on disk, the file position is advanced by this number.
+	 *
+	 * It is not necessarily an error if this number is smaller than the number of
+	 * bytes requested. If the file descriptor refers to a file on disk, this
+	 * indicates that the end of the file has been reached. If the file descriptor
+	 * refers to a stream, this indicates that the fewer bytes are actually
+	 * available right now than were requested, but more bytes may become available
+	 * in the future. Note that read() never waits for a stream to have more data;
+	 * it always returns as much as possible immediately.
+	 *
+	 * On error, -1 is returned, and the new file position is undefined. This can
+	 * happen if fileDescriptor is invalid, if part of the buffer is read-only or
+	 * invalid, or if a network stream has been terminated by the remote host and
+	 * no more data is available.
+	 */
+	private int handleRead(int fileDescriptor, char[] buffer, int count){
+
+//		readVirtualMemory(, data);
+		return -1;
+	}
+
+	/**
+	 * Attempt to write up to count bytes from buffer to the file or stream
+	 * referred to by fileDescriptor. write() can return before the bytes are
+	 * actually flushed to the file or stream. A write to a stream can block,
+	 * however, if kernel queues are temporarily full.
+	 *
+	 * On success, the number of bytes written is returned (zero indicates nothing
+	 * was written), and the file position is advanced by this number. It IS an
+	 * error if this number is smaller than the number of bytes requested. For
+	 * disk files, this indicates that the disk is full. For streams, this
+	 * indicates the stream was terminated by the remote host before all the data
+	 * was transferred.
+	 *
+	 * On error, -1 is returned, and the new file position is undefined. This can
+	 * happen if fileDescriptor is invalid, if part of the buffer is invalid, or
+	 * if a network stream has already been terminated by the remote host.
+	 */
+	private int write(int fileDescriptor, char[] buffer, int count){
+		return -1;
+	}
+
+	/**
+	 * Close a file descriptor, so that it no longer refers to any file or
+	 * stream and may be reused. The resources associated with the file
+	 * descriptor are released.
+	 *
+	 * Returns 0 on success, or -1 if an error occurred.
+	 */
+	private int close(int fileDescriptor){
+		return -1;
+	}
+
+	/**
+	 * Delete a file from the file system.
+	 *
+	 * If another process has the file open, the underlying file system
+	 * implementation in StubFileSystem will cleanly handle this situation
+	 * (this process will ask the file system to remove the file, but the
+	 * file will not actually be deleted by the file system until all
+	 * other processes are done with the file).
+	 *
+	 * Returns 0 on success, or -1 if an error occurred.
+	 */
+	private int unlink(char[] name){
+		return -1;
+	}
+
 
 	/**
 	 * Handle the halt() system call.
