@@ -388,7 +388,7 @@ public class UserProcess {
 			return -1;
 		}
 		OpenFile instan = ThreadedKernel.fileSystem.open(get_filename, true);
-		for (int i = 0; i < this.file_arr.length; i ++) {
+		for (int i = 2; i < this.file_arr.length; i ++) {
 			if (this.file_arr[i] != null) {
 				//check if the file exists or not
 				if (this.file_arr[i].getName().equals(get_filename)) {
@@ -396,13 +396,16 @@ public class UserProcess {
 				}
 			}else {
 				file_arr[i] = instan;
+				return i;
 			}
 		}
 		return -1;
 	}
 
 	private int handleRead(int fileDescriptor, int vaddr, int length) {
-		if (fileDescriptor < 0 || fileDescriptor >= 16) {
+		if (fileDescriptor < 0 || fileDescriptor == 1 || fileDescriptor >= 16) {
+			//0 for stdin
+			//1 for stdout
 			return -1;
 		}
 		OpenFile instan = this.file_arr[fileDescriptor];
@@ -411,28 +414,38 @@ public class UserProcess {
 		}
 		//res denotes the amount of successful read
 		//start denotes the position we should fetch data from file
+		byte[] buff = new byte[pageSize];
 		int res = 0;
-		int start = 0;
-		while(length > 0) {
-			int can_read = Math.min(pageSize, length);
-			byte[] temp_store = new byte[can_read];
-			if(instan.read(temp_store, start, can_read)<can_read) {
+		while(length > pageSize) {
+			int can_read = instan.read(buff, 0, pageSize);
+			if (can_read == -1){
 				return -1;
 			}
-			int success_write = this.writeVirtualMemory(vaddr, temp_store);
-			if (success_write < can_read) {
+			int can_write = this.writeVirtualMemory(vaddr, buff, 0, can_read);
+			if (can_read != can_write) {
 				return -1;
 			}
-			res = res + success_write;
-			start = start + can_read;
-			vaddr = vaddr + can_read;
-			length = length - can_read;
+			res = res + can_write;
+			length = length - can_write;
+		}
+		if (length != 0) {
+			//we have not finished yet
+			byte[] left_buff = new byte[length];
+			int can_read = instan.read(left_buff, 0, length);
+			if (can_read == -1){
+				return -1;
+			}
+			int can_write = this.writeVirtualMemory(vaddr, left_buff, 0, can_read);
+			if (can_read != can_write) {
+				return -1;
+			}
+			res = res + can_write;
 		}
 		return res;
 	}
 	
 	private int handleWrite(int fileDescriptor, int vaddr, int length) {
-		if (fileDescriptor < 0 || fileDescriptor >= 16) {
+		if (fileDescriptor < 2 || fileDescriptor >= 16) {
 			return -1;
 		}
 		OpenFile instan = this.file_arr[fileDescriptor];
@@ -440,21 +453,26 @@ public class UserProcess {
 			return -1;
 		}
 		int res = 0;
-		int next_start = 0;
-		while (length > 0) {
-			int can_read = Math.min(length, pageSize);
-			byte[] temp_store = new byte[can_read];
-			if(this.readVirtualMemory(vaddr, temp_store) < can_read) {
+		byte[] buffer = new byte[pageSize];
+		while (length > pageSize) {
+			int read_from_memory = this.readVirtualMemory(vaddr, buffer);
+			int write_to_file = instan.write(buffer, 0, read_from_memory);
+			if (write_to_file == -1) {
 				return -1;
 			}
-			int temp_num_write = instan.write(temp_store, next_start, length);
-			if(temp_num_write < can_read) {
+			if (read_from_memory != write_to_file) return -1;
+			res = res + write_to_file;
+			length = length - write_to_file;
+		}
+		if (length != 0) {
+			byte[] s_buffer = new byte[length];
+			int read_from_memory = this.readVirtualMemory(vaddr, s_buffer);
+			int write_to_file = instan.write(s_buffer, 0, read_from_memory);
+			if (write_to_file == -1) {
 				return -1;
 			}
-			res = res + temp_num_write;
-			next_start = next_start + can_read;
-			vaddr = vaddr + can_read;
-			length = length - can_read;
+			if (read_from_memory != write_to_file) return -1;
+			res = res + write_to_file;
 		}
 		return res;
 	}
@@ -469,6 +487,7 @@ public class UserProcess {
 			return -1;
 		}
 		instan.close();
+		this.file_arr[fileDescriptor] = null;
 		return 0;
 	}
 	
@@ -477,6 +496,13 @@ public class UserProcess {
 		String get_filename = new UserProcess().readVirtualMemoryString(vaddr, 256);
 		if (get_filename == null) {
 			return -1;
+		}
+		for (int i = 0; i < this.file_arr.length; i ++) {
+			if (this.file_arr[i] != null) {
+				if (this.file_arr[i].getName().equals(get_filename)) {
+					this.handleClose(i);
+				}
+			}
 		}
 		if(ThreadedKernel.fileSystem.remove(get_filename)) {
 			return 0;
