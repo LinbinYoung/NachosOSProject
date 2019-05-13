@@ -148,12 +148,14 @@ public class UserProcess {
 	public int readVirtualMemory(int vaddr, byte[] data, int offset, int length) {
 		Lib.assertTrue(offset >= 0 && length >= 0
 				&& offset + length <= data.length);
-
+		
 		byte[] memory = Machine.processor().getMemory();
-
+	
 		// for now, just assume that virtual addresses equal physical addresses
 		if (vaddr < 0 || vaddr >= memory.length)
 			return 0;
+		
+		
 
 		int amount = Math.min(length, memory.length - vaddr);
 		System.arraycopy(memory, vaddr, data, offset, amount);
@@ -298,10 +300,19 @@ public class UserProcess {
 	 * @return <tt>true</tt> if the sections were successfully loaded.
 	 */
 	protected boolean loadSections() {
+	
+		UserKernel.phyPagelLock.acquire();
+		
 		if (numPages > Machine.processor().getNumPhysPages()) {
 			coff.close();
 			Lib.debug(dbgProcess, "\tinsufficient physical memory");
+			UserKernel.phyPagelLock.release();
 			return false;
+		}
+		
+		for (int i = 0; i < numPages; ++i) {
+			int ppn = UserKernel.freePhyPages.remove(0);
+			pageTable[i] = new TranslationEntry(i, ppn, true, false, false, false);
 		}
 
 		// load sections
@@ -313,11 +324,15 @@ public class UserProcess {
 
 			for (int i = 0; i < section.getLength(); i++) {
 				int vpn = section.getFirstVPN() + i;
-
+				
+				pageTable[vpn].readOnly = section.isReadOnly();
+				section.loadPage(i, pageTable[vpn].ppn);
 				// for now, just assume virtual addresses=physical addresses
-				section.loadPage(i, vpn);
+				//section.loadPage(i, vpn);
 			}
 		}
+		
+		UserKernel.phyPagelLock.release();
 
 		return true;
 	}
@@ -450,18 +465,84 @@ public class UserProcess {
 		int successRead = 0;
 		
 		while (count > 0) {
-			byte[] buffer = new byte[pageSize];
+			byte[] tmp_data = new byte[pageSize];
 			
-			int successRead += of_instance.read(buffer,0 ,pageSize);
-			//of_instance.read(buf, offset, length);
+			int readLen = Math.min(count, pageSize);
+			int readByte =  of_instance.read(tmp_data,0 ,readLen);
 			
-			count -= successRead;
+			if (readByte == -1)
+				return -1;
+			
+			
+			int byteTransfer =  this.writeVirtualMemory(viAddr, tmp_data);
+			if (byteTransfer != readByte)
+				return -1;
+			
+			// move the pointer in virtual address
+			viAddr += byteTransfer;
+			count -= byteTransfer;
+			successRead += byteTransfer;
 		}
 		
+		return successRead;
 		
+	}
+	
+	private int handleWrite(int fileDescriptor, int viAddr, int count) {
+		
+		if (fileDescriptor < 0 || fileDescriptor > 15) return -1;
+		if (openFileTable[fileDescriptor] == null) return -1;
+		if (count <=0) return 0;
+		
+		OpenFile of_instance = openFileTable[fileDescriptor];
+		int sucessWrite = 0;
+		
+		while (count > 0) {
+			byte[] tmp_data = new byte[pageSize];
+			int readLen = Math.min(pageSize, count);
+			
+			int readByte = this.readVirtualMemory(viAddr, tmp_data, 0, readLen);
+			if (readByte != readLen)
+				return -1;
+			
+			int writeByte = of_instance.write(tmp_data, 0, readByte);
+			if (writeByte  == -1)
+				return -1;
+			
+			// move the pointer in virtual address
+			viAddr += readByte;
+			count -= writeByte;
+			sucessWrite += writeByte;
+		}
+		return sucessWrite;
+		
+	}
+
+	private int handleClose(int fileDescriptor) {
+		if (fileDescriptor < 0 || fileDescriptor > 15) return -1;
+		if (openFileTable[fileDescriptor] == null) return -1;
+		
+		openFileTable[fileDescriptor].close();
+		openFileTable[fileDescriptor] = null;
 		return 0;
+	}
+	
+	private int handleUnlink(int viAddr) {
 		
+		String fileName = this.readVirtualMemoryString(viAddr, 256);
+		if (fileName == null) return -1;
 		
+		// If this file in the table
+		for (int i =0; i < 16; ++i) {
+			if (openFileTable[i] != null && openFileTable[i].getName() == fileName) {
+				openFileTable[i].close();
+				openFileTable[i] = null;
+			}
+		}
+		
+		if (ThreadedKernel.fileSystem.remove(fileName) == true)
+			return 0;
+		else return -1;
 	}
 	
 
@@ -545,6 +626,15 @@ public class UserProcess {
 			
 		case syscallRead:
 			return handleRead(a0, a1, a2);
+		case syscallWrite:
+			return handleWrite(a0, a1, a2);
+		case syscallClose:
+			return handleClose(a0);
+		case syscallUnlink:
+			return handleUnlink(a0);
+		
+			
+		
 		
 
 		default:
