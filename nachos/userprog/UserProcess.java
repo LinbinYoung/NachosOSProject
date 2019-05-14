@@ -454,7 +454,7 @@ public class UserProcess {
 		
 		
 		// fileDescriptor is invalid
-		if (fileDescriptor <= 0 || fileDescriptor > 15)
+		if (fileDescriptor < 0 || fileDescriptor > 15 || fileDescriptor == 1)
 			return -1;
 		if (openFileTable[fileDescriptor] == null)
 			return -1;
@@ -490,12 +490,13 @@ public class UserProcess {
 	
 	private int handleWrite(int fileDescriptor, int viAddr, int count) {
 		
-		if (fileDescriptor < 0 || fileDescriptor > 15) return -1;
+		if (fileDescriptor < 0 || fileDescriptor > 15 || fileDescriptor == 0) return -1;
 		if (openFileTable[fileDescriptor] == null) return -1;
 		if (count <0) return -1;
 		
 		OpenFile of_instance = openFileTable[fileDescriptor];
 		int sucessWrite = 0;
+		
 		
 		while (count > 0) {
 			int readLen = Math.min(pageSize, count);
