@@ -12,7 +12,6 @@
 /**
  * System call codes, passed in $r0 to tell the kernel which system call to do.
  */
-
 #define	syscallHalt		0
 #define	syscallExit		1
 #define	syscallExec		2
@@ -35,7 +34,6 @@
  * display output (UNIX stdout). File descriptor 0 can be read, and file
  * descriptor 1 can be written, without previous calls to open().
  */
-
 #define fdStandardInput		0
 #define fdStandardOutput	1
 
@@ -140,7 +138,6 @@ int creat(char *name);
  *
  * Returns the new file descriptor, or -1 if an error occurred.
  */
-
 int open(char *name);
 
 /**

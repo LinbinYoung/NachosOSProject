@@ -24,10 +24,13 @@ public class UserProcess {
 	 */
 	public UserProcess() {
 		this.file_arr = new OpenFile[16];
+		this.file_arr[0] = UserKernel.console.openForReading();
+		this.file_arr[1] = UserKernel.console.openForWriting();
 		int numPhysPages = Machine.processor().getNumPhysPages();
 		pageTable = new TranslationEntry[numPhysPages];
 		// Initialized the pageTable for the process
 		for (int i = 0; i < numPhysPages; i++)
+			//vpn == ppn
 			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
 	}
 
@@ -302,11 +305,12 @@ public class UserProcess {
 			for (int i = 0; i < section.getLength(); i++) {
 				int vpn = section.getFirstVPN() + i;
 
-				// for now, just assume virtual addresses=physical addresses
+				//for now, just assume virtual addresses=physical addresses
+				//here we need to map the vpn to ppn
+				
 				section.loadPage(i, vpn);
 			}
 		}
-
 		return true;
 	}
 
@@ -352,7 +356,9 @@ public class UserProcess {
 	 * Handle the exit() system call.
 	 */
 	private int handleExit(int status) {
+		Machine.autoGrader().finishingCurrentProcess(status);
 		Lib.debug(dbgProcess, "UserProcess.handleExit (" + status + ")");
+        // Do not remove this call to the autoGrader...
 		// for now, unconditionally terminate with just one process
 		Kernel.kernel.terminate();
 		return 0;
@@ -360,31 +366,31 @@ public class UserProcess {
 
 	private int handleOpen(int vaddr) {
 		// Get the filename
+		if (vaddr < 0) return -1;
 		String get_filename = new UserProcess().readVirtualMemoryString(vaddr, 256);
 		if (get_filename == null) {
 			return -1;
 		}
-		OpenFile instan = ThreadedKernel.fileSystem.open(get_filename, false);
-		if (instan == null) {
-			// Try to Open a file that does not exist
-			return -1;
-		}
-		if (instan != null) {
-			for (int i = 0; i < this.file_arr.length; i ++) {
-				if (this.file_arr[i] == instan) return i;
+		
+		for (int i = 0; i < this.file_arr.length; i ++) {
+			if (this.file_arr[i] == null) {
+				OpenFile instan = ThreadedKernel.fileSystem.open(get_filename, false);
+				if (instan == null) return -1;
+				this.file_arr[i] = instan;
+				return i;
 			}
 		}
+		
 		return -1;
 	}
 
-	private int handleCreate(int status) {
-        // Do not remove this call to the autoGrader...
-		Machine.autoGrader().finishingCurrentProcess(status);
-		// ...and leave it as the top of handleExit so that we
-		// can grade your implementation.
+	private int handleCreate(int vaddr) {
 		// Get the filename
-		String get_filename = new UserProcess().readVirtualMemoryString(status, 256);
+		String get_filename = new UserProcess().readVirtualMemoryString(vaddr, 256);
 		if (get_filename == null) {
+			return -1;
+		}
+		if (vaddr < 0) {
 			return -1;
 		}
 		OpenFile instan = ThreadedKernel.fileSystem.open(get_filename, true);
@@ -404,8 +410,9 @@ public class UserProcess {
 
 	private int handleRead(int fileDescriptor, int vaddr, int length) {
 		if (fileDescriptor < 0 || fileDescriptor == 1 || fileDescriptor >= 16) {
-			//0 for stdin
-			//1 for stdout
+			return -1;
+		}
+		if (length < 0 || vaddr < 0) {
 			return -1;
 		}
 		OpenFile instan = this.file_arr[fileDescriptor];
@@ -414,38 +421,30 @@ public class UserProcess {
 		}
 		//res denotes the amount of successful read
 		//start denotes the position we should fetch data from file
-		byte[] buff = new byte[pageSize];
+		byte[] buff;
 		int res = 0;
-		while(length > pageSize) {
-			int can_read = instan.read(buff, 0, pageSize);
-			if (can_read == -1){
+		while(length > 0) {
+			int can_read = Math.min(length, pageSize);
+			buff = new byte[can_read];
+			if (instan.read(buff, 0, can_read) != can_read) {
 				return -1;
 			}
-			int can_write = this.writeVirtualMemory(vaddr, buff, 0, can_read);
-			if (can_read != can_write) {
+			int write_back = this.writeVirtualMemory(vaddr, buff, 0, can_read);
+			if (write_back != can_read) {
 				return -1;
 			}
-			res = res + can_write;
-			length = length - can_write;
-		}
-		if (length != 0) {
-			//we have not finished yet
-			byte[] left_buff = new byte[length];
-			int can_read = instan.read(left_buff, 0, length);
-			if (can_read == -1){
-				return -1;
-			}
-			int can_write = this.writeVirtualMemory(vaddr, left_buff, 0, can_read);
-			if (can_read != can_write) {
-				return -1;
-			}
-			res = res + can_write;
+			res = res + can_read;
+			length = length - can_read;
+			vaddr = vaddr + can_read;	
 		}
 		return res;
 	}
 	
 	private int handleWrite(int fileDescriptor, int vaddr, int length) {
-		if (fileDescriptor < 2 || fileDescriptor >= 16) {
+		if (fileDescriptor <= 0 || fileDescriptor >= 16) {
+			return -1;
+		}
+		if (length < 0 || vaddr < 0) {
 			return -1;
 		}
 		OpenFile instan = this.file_arr[fileDescriptor];
@@ -453,26 +452,20 @@ public class UserProcess {
 			return -1;
 		}
 		int res = 0;
-		byte[] buffer = new byte[pageSize];
-		while (length > pageSize) {
-			int read_from_memory = this.readVirtualMemory(vaddr, buffer);
-			int write_to_file = instan.write(buffer, 0, read_from_memory);
-			if (write_to_file == -1) {
+		byte[] temp_store;
+		while (length > 0) {
+			int can_write = Math.min(pageSize, length);
+			temp_store = new byte[can_write];
+			if(this.readVirtualMemory(vaddr, temp_store, 0, can_write) != can_write) {
 				return -1;
 			}
-			if (read_from_memory != write_to_file) return -1;
-			res = res + write_to_file;
-			length = length - write_to_file;
-		}
-		if (length != 0) {
-			byte[] s_buffer = new byte[length];
-			int read_from_memory = this.readVirtualMemory(vaddr, s_buffer);
-			int write_to_file = instan.write(s_buffer, 0, read_from_memory);
-			if (write_to_file == -1) {
+			int write_back = instan.write(temp_store, 0, can_write);
+			if (write_back == -1 || write_back != can_write) {
 				return -1;
 			}
-			if (read_from_memory != write_to_file) return -1;
-			res = res + write_to_file;
+			res = res + can_write;
+			length = length - can_write;
+			vaddr = vaddr + can_write;
 		}
 		return res;
 	}
@@ -495,6 +488,9 @@ public class UserProcess {
 	private int handleUnlink(int vaddr) {
 		String get_filename = new UserProcess().readVirtualMemoryString(vaddr, 256);
 		if (get_filename == null) {
+			return -1;
+		}
+		if (vaddr < 0) {
 			return -1;
 		}
 		for (int i = 0; i < this.file_arr.length; i ++) {
