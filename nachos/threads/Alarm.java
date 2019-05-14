@@ -120,6 +120,7 @@ public class Alarm {
 		for (Thread_with_time kth : Alarm.t_queue) {
 			if(kth.thread == thread) {
 				Machine.interrupt().restore(intStatus);
+				thread.ready();
 				return Alarm.t_queue.remove(kth);
 			}
 		}

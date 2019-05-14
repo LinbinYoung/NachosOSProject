@@ -1,11 +1,14 @@
 package nachos.userprog;
 
 import nachos.machine.*;
+
 import nachos.threads.*;
 import nachos.userprog.*;
 import nachos.vm.*;
 
 import java.io.EOFException;
+import java.util.*;
+import java.lang.*;
 
 /**
  * Encapsulates the state of a user process that is not contained in its user
@@ -23,8 +26,8 @@ public class UserProcess {
 	/**
 	 * Allocate a new process.
 	 */
-	static int fileTableSize = 16;
-	protected String[] fileDescTable;
+	static int s_fileTableSize = 16;
+	protected OpenFile[] fileDescTable;
 
 	public UserProcess() {
 		int numPhysPages = Machine.processor().getNumPhysPages();
@@ -33,9 +36,10 @@ public class UserProcess {
 		for (int i = 0; i < numPhysPages; i++)
 			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
 
-		fileDescTable = new String[fileTableSize + 2];
-		fileDescTable[0] = UserKernel.console.openForReading().getName();
-		fileDescTable[1] = UserKernel.console.openForWriting().getName();
+		//Todo: do we need +2 here?
+		fileDescTable = new OpenFile[s_fileTableSize ];
+		fileDescTable[0] = UserKernel.console.openForReading();
+		fileDescTable[1] = UserKernel.console.openForWriting();
 	}
 
 	/**
@@ -46,7 +50,7 @@ public class UserProcess {
 	 * @return a new process of the correct class.
 	 */
 	public static UserProcess newUserProcess() {
-	        String name = Machine.getProcessClassName ();
+		String name = Machine.getProcessClassName ();
 
 		// If Lib.constructObject is used, it quickly runs out
 		// of file descriptors and throws an exception in
@@ -302,11 +306,20 @@ public class UserProcess {
 	 * @return <tt>true</tt> if the sections were successfully loaded.
 	 */
 	protected boolean loadSections() {
-		if (numPages > Machine.processor().getNumPhysPages()) {
+
+		UserKernel.physicalPageSema.P();
+		if (numPages > UserKernel.physicalPageList.size()) {
 			coff.close();
 			Lib.debug(dbgProcess, "\tinsufficient physical memory");
+			UserKernel.physicalPageSema.V();
 			return false;
+		}else {
+			for(int i = 0; i<numPages; i++) {
+				int ppn = UserKernel.physicalPageList.remove(0);
+				this.pageTable[i] = new TranslationEntry(i, ppn, true, false, false, false);
+			}
 		}
+		UserKernel.physicalPageSema.V();
 
 		// load sections
 		for (int s = 0; s < coff.getNumSections(); s++) {
@@ -317,12 +330,13 @@ public class UserProcess {
 
 			for (int i = 0; i < section.getLength(); i++) {
 				int vpn = section.getFirstVPN() + i;
-
-				// for now, just assume virtual addresses=physical addresses
-				section.loadPage(i, vpn);
+				//determine which sections are ready only using coff.isReadOnly()
+				this.pageTable[vpn].readOnly = section.isReadOnly();
+				section.loadPage(i, this.pageTable[vpn].ppn);
+//				// for now, just assume virtual addresses=physical addresses
+//				section.loadPage(i, vpn);
 			}
 		}
-
 		return true;
 	}
 
@@ -330,6 +344,12 @@ public class UserProcess {
 	 * Release any resources allocated by <tt>loadSections()</tt>.
 	 */
 	protected void unloadSections() {
+		for(int i = 0; i<this.pageTable.length; i++) {
+			if(this.pageTable[i].valid) {
+				this.pageTable[i].valid = false;
+				UserKernel.physicalPageList.add(pageTable[i].ppn);
+			}
+		}
 	}
 
 	/**
@@ -379,26 +399,25 @@ public class UserProcess {
 	 * #mcip
 	 * Handle the create() system call
 	 */
-	private int handleCreat(char[] name){
-		if(name.length > 256) return -1;
+	private int handleCreate(int vaddr){
+//		if(vaddr < 0) return -1;
+		String file_name = readVirtualMemoryString(vaddr, 256);
+		if(file_name == null) return -1;
 
-		int res = handleOpen(name);
-		if (res != -1) return res;
-
-		OpenFile file = ThreadedKernel.fileSystem.open(new String(name), false);
+		OpenFile file = ThreadedKernel.fileSystem.open(new String(file_name), true);
 		if (file == null) return -1;
-		else {
-			for (int i = 0; i<fileTableSize; i++) {
-				if (this.fileDescTable[i] == "") {
-					//todo: do we need to close the file?
-					//ThreadedKernel.fileSystem.close();
-					this.fileDescTable[i] = "" + name;
-					return i;
-				}
+//		System.out.println("c1");
+		int empty_ind = -1;
+		for (int i = 2; i < s_fileTableSize; i++) {
+			if (this.fileDescTable[i] == null) {
+				empty_ind = i;
+				break;
 			}
 		}
-		//TODO: what if there is no spot in array
-		return -1;
+		if (empty_ind == -1) return -1;
+
+		this.fileDescTable[empty_ind] = file;
+		return empty_ind;
 	}
 
 	/**
@@ -409,16 +428,25 @@ public class UserProcess {
 	 *
 	 * Returns the new file descriptor, or -1 if an error occurred.
 	 */
-	private int handleOpen(char[] name){
-		if(name.length > 256) return -1;
+	private int handleOpen(int vaddr){
+//		if(vaddr < 0) return -1;
 
-		for (int i = 0; i<fileTableSize; i++){
-			if (this.fileDescTable[i] == ""+name) {
-				OpenFile file = ThreadedKernel.fileSystem.open(new String(name), false);
-				return i;
+		String file_name = readVirtualMemoryString(vaddr, 256);
+		if(file_name == null) return -1;
+
+		int empty_ind = -1;
+		for (int i = 2; i < fileDescTable.length; i++){
+			if(this.fileDescTable[i] == null){
+				empty_ind = i;
+				break;
 			}
 		}
-		return -1;
+		if (empty_ind == -1) return -1;
+
+		OpenFile file = ThreadedKernel.fileSystem.open(new String(file_name), false);
+		if(file == null) return -1;
+		this.fileDescTable[empty_ind] = file;
+		return empty_ind;
 	}
 
 	/**
@@ -441,10 +469,24 @@ public class UserProcess {
 	 * invalid, or if a network stream has been terminated by the remote host and
 	 * no more data is available.
 	 */
-	private int handleRead(int fileDescriptor, char[] buffer, int count){
+	private int handleRead(int fileDescriptor, int bufferAddr, int count){
+		if(fileDescriptor < 0 || fileDescriptor == 1 || fileDescriptor>=s_fileTableSize || count < 0) return -1;
+		OpenFile file = this.fileDescTable[fileDescriptor];
+		if(file == null) return -1;
 
-//		readVirtualMemory(, data);
-		return -1;
+		byte[] buffer = new byte[pageSize];
+		int bytes_read = 0, cur_ker_read = 0, cur_pro_write = 0;
+		while(count > 0){
+			cur_ker_read = file.read(buffer, 0, Math.min(count, pageSize));
+			if(cur_ker_read <= 0) return -1;
+
+			cur_pro_write = writeVirtualMemory(bufferAddr, buffer, 0, cur_ker_read);
+			if(cur_ker_read != cur_pro_write) return -1;
+			bufferAddr += cur_ker_read;
+			bytes_read += cur_ker_read;
+			count -= cur_ker_read;
+		}
+		return bytes_read;
 	}
 
 	/**
@@ -464,8 +506,39 @@ public class UserProcess {
 	 * happen if fileDescriptor is invalid, if part of the buffer is invalid, or
 	 * if a network stream has already been terminated by the remote host.
 	 */
-	private int write(int fileDescriptor, char[] buffer, int count){
-		return -1;
+	private int handleWrite(int fileDescriptor, int bufferAddr, int count){
+		if(fileDescriptor <= 0 || fileDescriptor>=s_fileTableSize || count < 0) {
+			Lib.debug(dbgProcess, String.format("fD %d not in range or count < 0", fileDescriptor));
+			return -1;
+		}
+		OpenFile file = this.fileDescTable[fileDescriptor];
+		if(file == null) {
+			Lib.debug(dbgProcess, "file DNE");
+			return -1;
+		}
+
+		byte[] buffer = new byte[pageSize];
+		int bytes_write = 0, cur_pro_read = 0, cur_ker_write = 0;
+
+		while(count > 0){
+			cur_pro_read = readVirtualMemory(bufferAddr, buffer, 0, Math.min(count, pageSize));
+			if(cur_pro_read <= 0) {
+				Lib.debug(dbgProcess, "doesnt read any");
+				return -1;
+			}
+
+			cur_ker_write = file.write(buffer, 0, cur_pro_read);
+//			cur_ker_write = file.write(bufferAddr, buffer, 0, cur_pro_read);
+			if(cur_ker_write != cur_pro_read) {
+				Lib.debug(dbgProcess, "write not equal to read");
+				return -1;
+			}
+
+			bytes_write += cur_pro_read;
+			bufferAddr += cur_pro_read;
+			count -= cur_pro_read;
+		}
+		return bytes_write;
 	}
 
 	/**
@@ -475,8 +548,13 @@ public class UserProcess {
 	 *
 	 * Returns 0 on success, or -1 if an error occurred.
 	 */
-	private int close(int fileDescriptor){
-		return -1;
+	private int handleClose(int fileDescriptor){
+		if(fileDescriptor < 0 || fileDescriptor>=s_fileTableSize) return -1;
+		OpenFile file = this.fileDescTable[fileDescriptor];
+		if(file == null) return -1;
+		file.close();
+		this.fileDescTable[fileDescriptor] = null;
+		return 0;
 	}
 
 	/**
@@ -490,7 +568,18 @@ public class UserProcess {
 	 *
 	 * Returns 0 on success, or -1 if an error occurred.
 	 */
-	private int unlink(char[] name){
+	private int handleUnlink(int vaddr){
+//		if(vaddr < 0) return -1;
+		String file_name = readVirtualMemoryString(vaddr, 256);
+		int to_close = -1;
+		for(int i = 0; i<this.fileDescTable.length; i++){
+			if(this.fileDescTable[i] != null && this.fileDescTable[i].getName().equals(file_name)){
+				to_close = i;
+				break;
+			}
+		}
+		if(to_close != -1) handleClose(to_close);
+		if(ThreadedKernel.fileSystem.remove(file_name)) return 0;
 		return -1;
 	}
 
@@ -514,6 +603,9 @@ public class UserProcess {
 		Machine.autoGrader().finishingCurrentProcess(status);
 		// ...and leave it as the top of handleExit so that we
 		// can grade your implementation.
+
+		this.unloadSections();
+		coff.close();
 
 		Lib.debug(dbgProcess, "UserProcess.handleExit (" + status + ")");
 		// for now, unconditionally terminate with just one process
@@ -594,7 +686,18 @@ public class UserProcess {
 			return handleHalt();
 		case syscallExit:
 			return handleExit(a0);
-
+		case syscallCreate:
+			return handleCreate(a0);
+		case syscallOpen:
+			return handleOpen(a0);
+		case syscallRead:
+			return handleRead(a0, a1, a2);
+		case syscallWrite:
+			return handleWrite(a0, a1, a2);
+		case syscallClose:
+			return handleClose(a0);
+		case syscallUnlink:
+			return handleUnlink(a0);
 		default:
 			Lib.debug(dbgProcess, "Unknown syscall " + syscall);
 			Lib.assertNotReached("Unknown system call!");
@@ -624,6 +727,7 @@ public class UserProcess {
 			break;
 
 		default:
+			this.unloadSections();
 			Lib.debug(dbgProcess, "Unexpected exception: "
 					+ Processor.exceptionNames[cause]);
 			Lib.assertNotReached("Unexpected exception");

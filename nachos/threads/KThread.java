@@ -443,14 +443,13 @@ public class KThread {
 	 * Tests whether this module is working.
 	 */
 	public static void selfTest() {
-		Lib.debug(dbgThread, "Enter KThread.selfTest");
-
-		new KThread(new PingTest(1)).setName("forked thread").fork();
-		new PingTest(0).run();
-		KThread.joinTest1();
-
-		KThread.joinTest5();
-
+//		Lib.debug(dbgThread, "Enter KThread.selfTest");
+//
+//		new KThread(new PingTest(1)).setName("forked thread").fork();
+//		new PingTest(0).run();
+//		KThread.joinTest1();
+//
+//		KThread.joinTest5();
 	}
 
 	// Place Join test code in the KThread class and invoke test methods
