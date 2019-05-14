@@ -458,19 +458,19 @@ public class UserProcess {
 			return -1;
 		if (openFileTable[fileDescriptor] == null)
 			return -1;
-		if (count <= 0)
-			return 0;
+		if (count < 0)
+			return -1;
 		
 		OpenFile of_instance = openFileTable[fileDescriptor];
 		int successRead = 0;
 		
 		while (count > 0) {
-			byte[] tmp_data = new byte[pageSize];
-			
+
 			int readLen = Math.min(count, pageSize);
-			int readByte =  of_instance.read(tmp_data,0 ,readLen);
+			byte[] tmp_data = new byte[readLen];
 			
-			if (readByte == -1)
+			int readByte =  of_instance.read(tmp_data,0 ,readLen);			
+			if (readByte == -1 || readByte != readLen)
 				return -1;
 			
 			
@@ -492,25 +492,25 @@ public class UserProcess {
 		
 		if (fileDescriptor < 0 || fileDescriptor > 15) return -1;
 		if (openFileTable[fileDescriptor] == null) return -1;
-		if (count <=0) return 0;
+		if (count <0) return -1;
 		
 		OpenFile of_instance = openFileTable[fileDescriptor];
 		int sucessWrite = 0;
 		
 		while (count > 0) {
-			byte[] tmp_data = new byte[pageSize];
 			int readLen = Math.min(pageSize, count);
+			byte[] tmp_data = new byte[readLen];
 			
 			int readByte = this.readVirtualMemory(viAddr, tmp_data, 0, readLen);
 			if (readByte != readLen)
 				return -1;
 			
 			int writeByte = of_instance.write(tmp_data, 0, readByte);
-			if (writeByte  == -1)
+			if (writeByte  == -1 || writeByte != readByte)
 				return -1;
 			
 			// move the pointer in virtual address
-			viAddr += readByte;
+			viAddr += writeByte;
 			count -= writeByte;
 			sucessWrite += writeByte;
 		}
