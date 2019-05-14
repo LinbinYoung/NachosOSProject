@@ -1,4 +1,6 @@
- /*
+/*
+ * write4.c
+ *
  * Echo lines of input to the output.  Terminate on a ".".  Requires basic
  * functionality for both write and read.
  *
@@ -32,14 +34,14 @@ main ()
        // read the input terminated by a newline
        i = 0;
        do {
-       buffer[i] = getchar ();
+	   buffer[i] = getchar ();
        } while (buffer[i++] != '\n');
        buffer[i] = '\0';
 
        // if the input is just a period, then exit
        if (buffer[0] == '.' &&
-       buffer[1] == '\n') {
-       return 0;
+	   buffer[1] == '\n') {
+	   return 0;
        }
 
        // echo the input to the output
