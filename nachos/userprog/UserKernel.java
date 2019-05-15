@@ -24,6 +24,13 @@ public class UserKernel extends ThreadedKernel {
 	
 	public void initialize(String[] args) {
 		super.initialize(args);
+		sem = new Semaphore(1);
+		sem_for_id = new Semaphore(1);
+		Counter = 0;
+		mPhyPage = new LinkedList<>();
+		for (int i = 0; i < Machine.processor().getNumPhysPages(); i ++) {
+			mPhyPage.add(i);
+		}
 		console = new SynchConsole(Machine.console());
 		Machine.processor().setExceptionHandler(new Runnable() {
 			public void run() {
@@ -114,10 +121,13 @@ public class UserKernel extends ThreadedKernel {
 	}
 
 	/** Globally accessible reference to the synchronized console. */
-	public static SynchConsole console;
-
 	// dummy variables to make javac smarter
 	private static Coff dummy1 = null;
-	
-	private static LinkedList mPhyPage;
+	public static SynchConsole console;
+	public static LinkedList<Integer> mPhyPage = new LinkedList<>();
+	public static int Counter;
+	public static Semaphore sem_for_id;
+//	public static Lock protected_lock = new Lock();
+//	public static Condition c_lock = new Condition(protected_lock);
+	public static Semaphore sem;
 }

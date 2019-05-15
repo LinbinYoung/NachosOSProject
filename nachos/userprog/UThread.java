@@ -1,5 +1,4 @@
 package nachos.userprog;
-
 import nachos.machine.*;
 import nachos.threads.*;
 import nachos.userprog.*;
@@ -8,6 +7,7 @@ import nachos.userprog.*;
  * A UThread is KThread that can execute user program code inside a user
  * process, in addition to Nachos kernel code.
  */
+
 public class UThread extends KThread {
 	/**
 	 * Allocate a new UThread.
@@ -27,9 +27,7 @@ public class UThread extends KThread {
 	private void runProgram() {
 		process.initRegisters();
 		process.restoreState();
-
 		Machine.processor().run();
-
 		Lib.assertNotReached();
 	}
 
@@ -38,22 +36,18 @@ public class UThread extends KThread {
 	 */
 	protected void saveState() {
 		process.saveState();
-
 		for (int i = 0; i < Processor.numUserRegisters; i++)
 			userRegisters[i] = Machine.processor().readRegister(i);
-
 		super.saveState();
 	}
 
 	/**
 	 * Restore state before receiving the processor again.
 	 */
-	protected void restoreState() {
+	protected void restoreState(){
 		super.restoreState();
-
 		for (int i = 0; i < Processor.numUserRegisters; i++)
 			Machine.processor().writeRegister(i, userRegisters[i]);
-
 		process.restoreState();
 	}
 

@@ -18,6 +18,7 @@ import java.io.EOFException;
  * @see nachos.vm.VMProcess
  * @see nachos.network.NetProcess
  */
+
 public class UserProcess {
 	/**
 	 * Allocate a new process.
@@ -28,10 +29,20 @@ public class UserProcess {
 		this.file_arr[1] = UserKernel.console.openForWriting();
 		int numPhysPages = Machine.processor().getNumPhysPages();
 		pageTable = new TranslationEntry[numPhysPages];
-		// Initialized the pageTable for the process
-		for (int i = 0; i < numPhysPages; i++)
-			//vpn == ppn
-			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
+		/**
+		 * Allocate a new translation entry with the specified initial state.
+		 * 
+		 * @param vpn the virtual page number.
+		 * @param ppn the physical page number.
+		 * @param valid the valid bit.
+		 * @param readOnly the read-only bit.
+		 * @param used the used bit.
+		 * @param dirty the dirty bit.
+		 */
+		for (int i = 0; i < numPhysPages; i++) {
+			TranslationEntry instan = new TranslationEntry(i, i, false, false, false, false);
+			pageTable[i] = instan;
+		}
 	}
 
 	/**
@@ -69,7 +80,6 @@ public class UserProcess {
 	 */
 	
 	public boolean execute(String name, String[] args) {
-		System.out.println(name);
 		if (!load(name, args))
 			return false;
 		thread = new UThread(this);
@@ -110,6 +120,7 @@ public class UserProcess {
 		Lib.assertTrue(maxLength >= 0);
 		byte[] bytes = new byte[maxLength + 1];
 		int bytesRead = readVirtualMemory(vaddr, bytes);
+//		System.out.println(bytesRead+"LINBINYANG");
 		for (int length = 0; length < bytesRead; length++) {
 			if (bytes[length] == 0)
 				return new String(bytes, 0, length);
@@ -149,11 +160,66 @@ public class UserProcess {
 		Lib.assertTrue(offset >= 0 && length >= 0 && offset + length <= data.length);
 		byte[] memory = Machine.processor().getMemory();
 		// for now, just assume that virtual addresses equal physical addresses
-		if (vaddr < 0 || vaddr >= memory.length)
+		if (vaddr < 0 || vaddr >= memory.length) {
 			return 0;
-		int amount = Math.min(length, memory.length - vaddr);
-		System.arraycopy(memory, vaddr, data, offset, amount);
-		return amount;
+		}
+		int success_read = 0;
+		//Get vpn from vaddr
+		int vpn = Processor.pageFromAddress(vaddr);
+		int phy_offset = Processor.offsetFromAddress(vaddr);
+		//Use vpn to get the entry of ppn
+		TranslationEntry entry = this.pageTable[vpn];
+		int phy_addr = pageSize*entry.ppn + phy_offset;
+		if (phy_addr >= memory.length || phy_addr < 0) {
+			System.out.println("Invalid Physical Address");
+			return 0;
+		}
+//		System.out.println(entry.valid);
+//		System.out.println("MICHAEL");
+//		if (entry.valid) {
+			// we can not ignore this page
+			// read data page by page
+			// length denotes how many bytes that yield to write
+			// The pages are not continuous
+			entry.used = true;
+			int start = 0;
+			while (length > 0) {
+				if (phy_offset + length > pageSize) {
+					int can_write_length = pageSize - phy_offset;
+					System.arraycopy(memory, phy_addr, data, start, can_write_length);
+					start = start + can_write_length;
+					length = length - can_write_length;
+					success_read += can_write_length;
+					//update to the next physical address
+					if (++vpn > this.pageTable.length) {
+						return success_read;
+					}
+					entry.used = false;
+					entry = this.pageTable[vpn];
+					if (!entry.valid) {
+						return success_read;
+					}
+					phy_offset = 0;
+					phy_addr = entry.ppn*pageSize + phy_offset;
+					if (phy_addr >= memory.length || phy_addr < 0) {
+						System.out.println("Invalid Physical Address");
+						return success_read;
+					}
+					entry.used = true;
+				}else {
+					int can_write_length = length;
+					System.arraycopy(memory, phy_addr, data, start, can_write_length);
+					success_read += can_write_length;
+					System.out.println(success_read);
+					start = start + can_write_length;
+					length = length - can_write_length;
+					entry.used = false;
+				}
+			}//end while
+//		}
+//		System.out.println("READ");
+//		System.out.println(success_read);
+		return success_read;
 	}
 
 	/**
@@ -190,9 +256,58 @@ public class UserProcess {
 		// for now, just assume that virtual addresses equal physical addresses
 		if (vaddr < 0 || vaddr >= memory.length)
 			return 0;
-		int amount = Math.min(length, memory.length - vaddr);
-		System.arraycopy(data, offset, memory, vaddr, amount);
-		return amount;
+		int success_write = 0;
+		//Get vpn from vaddr
+		int vpn = Processor.pageFromAddress(vaddr);
+		int phy_offset = Processor.offsetFromAddress(vaddr);
+		//Use vpn to get the entry of ppn
+		TranslationEntry entry = this.pageTable[vpn];
+		int phy_addr = pageSize*entry.ppn + phy_offset;
+		if (phy_addr >= memory.length || phy_addr < 0) {
+			System.out.println("Invalid Physical Address");
+			return 0;
+		}
+		if (entry.readOnly) {
+			// we cannot write data to memory
+			return 0;
+		}
+		entry.used = true;
+		int start = 0;
+		while (length > 0) {
+			// write page by page
+			if (phy_offset + length > pageSize) {
+				int can_to_memory = pageSize - phy_offset;
+				System.arraycopy(data, start, memory, phy_addr, can_to_memory);
+				success_write += can_to_memory;
+				start = start + can_to_memory;
+				length = length - can_to_memory;
+				if (++vpn > this.pageTable.length) {
+					return success_write;
+				}
+				entry.used = false;
+				//calculate the new phy_addr
+				entry = this.pageTable[vpn];
+				phy_offset = 0;
+				phy_addr = pageSize*entry.ppn + phy_offset;
+				if (phy_addr >= memory.length || phy_addr < 0) {
+					System.out.println("Invalid Physical Address");
+					return success_write;
+				}
+				if (entry.readOnly) {
+					// we cannot write data to memory
+					return success_write;
+				}
+				entry.used = true;
+			}else {
+				int can_to_memory = length;
+				System.arraycopy(data, start, memory, phy_addr, can_to_memory);
+				success_write += can_to_memory;
+				start = start + can_to_memory;
+				length = length - can_to_memory;
+				entry.used = false;
+			}
+		}
+		return success_write;
 	}
 
 	/**
@@ -205,15 +320,14 @@ public class UserProcess {
 	 * @param args the arguments to pass to the executable.
 	 * @return <tt>true</tt> if the executable was successfully loaded.
 	 */
+	
 	private boolean load(String name, String[] args) {
 		Lib.debug(dbgProcess, "UserProcess.load(\"" + name + "\")");
-
 		OpenFile executable = ThreadedKernel.fileSystem.open(name, false);
 		if (executable == null) {
 			Lib.debug(dbgProcess, "\topen failed");
 			return false;
 		}
-
 		try {
 			coff = new Coff(executable);
 		}
@@ -248,17 +362,13 @@ public class UserProcess {
 			Lib.debug(dbgProcess, "\targuments too long");
 			return false;
 		}
-
 		// program counter initially points at the program entry point
 		initialPC = coff.getEntryPoint();
-
 		// next comes the stack; stack pointer initially points to top of it
 		numPages += stackPages;
 		initialSP = numPages * pageSize;
-
 		// and finally reserve 1 page for arguments
 		numPages++;
-
 		if (!loadSections())
 			return false;
 
@@ -289,28 +399,75 @@ public class UserProcess {
 	 * @return <tt>true</tt> if the sections were successfully loaded.
 	 */
 	protected boolean loadSections() {
-		if (numPages > Machine.processor().getNumPhysPages()) {
+		if (numPages > Machine.processor().getNumPhysPages()){
 			coff.close();
 			Lib.debug(dbgProcess, "\tinsufficient physical memory");
 			return false;
 		}
-
 		// load sections
 		for (int s = 0; s < coff.getNumSections(); s++) {
 			CoffSection section = coff.getSection(s);
-
-			Lib.debug(dbgProcess, "\tinitializing " + section.getName()
-					+ " section (" + section.getLength() + " pages)");
-
+			int start = section.getFirstVPN();
+			Lib.debug(dbgProcess, "\tinitializing " + section.getName() + " section (" + section.getLength() + " pages)");
 			for (int i = 0; i < section.getLength(); i++) {
-				int vpn = section.getFirstVPN() + i;
-
-				//for now, just assume virtual addresses=physical addresses
-				//here we need to map the vpn to ppn
-				
-				section.loadPage(i, vpn);
+				int vpn = start + i;
+				// For now, just assume virtual addresses=physical addresses
+				// Here we need to map the vpn to ppn
+				// Get the ppn from the Pagetable
+				TranslationEntry entry = pageTable[vpn];
+				UserKernel.sem.P();
+				Integer free_page = UserKernel.mPhyPage.removeFirst();
+				UserKernel.sem.V();
+				if (free_page == null) {
+					// No available page
+					unloadSections();
+					return false;
+				}else{
+					/**
+					 * Allocate a new translation entry with the specified initial state.
+					 * @param vpn the virtual page number.
+					 * @param ppn the physical page number.
+					 * @param valid the valid bit.
+					 * @param readOnly the read-only bit.
+					 * @param used the used bit.
+					 * @param dirty the dirty bit.
+					 */
+					entry.ppn = free_page;
+					entry.readOnly = section.isReadOnly();
+					entry.valid = true;
+				}
+				//load and run
+				section.loadPage(i, entry.ppn);
 			}
 		}
+			//0-num_of_coff sections
+			//8 stack pages
+			//1 page reserved for arguments
+			for (int i = numPages - 9; i < numPages; i ++) {
+				TranslationEntry entry = pageTable[i];
+				//acquire lock, no race condition
+				UserKernel.sem.P();
+				Integer free_page = UserKernel.mPhyPage.removeFirst();
+				//release lock
+				UserKernel.sem.V();
+				if (free_page == null) {
+					// No available page
+					unloadSections();
+					return false;
+				}else {
+					/**
+					 * Allocate a new translation entry with the specified initial state.
+					 * @param vpn the virtual page number.
+					 * @param ppn the physical page number.
+					 * @param valid the valid bit.
+					 * @param readOnly the read-only bit.
+					 * @param used the used bit.
+					 * @param dirty the dirty bit.
+					 */
+					entry.ppn = free_page;
+					entry.valid = true;
+				}
+			}
 		return true;
 	}
 
@@ -318,6 +475,16 @@ public class UserProcess {
 	 * Release any resources allocated by <tt>loadSections()</tt>.
 	 */
 	protected void unloadSections() {
+		// total number of entry for the process: numPages
+		for(int i = 0; i < pageTable.length; i ++) {
+			TranslationEntry entry = pageTable[i];
+			if (entry.valid) {
+				//valid false: we can ignore the page
+				UserKernel.sem.P();
+				UserKernel.mPhyPage.add(entry.ppn);
+				UserKernel.sem.V();
+			}
+		}//end for
 	}
 
 	/**
@@ -329,15 +496,12 @@ public class UserProcess {
 	 */
 	public void initRegisters() {
 		Processor processor = Machine.processor();
-
 		// by default, everything's 0
 		for (int i = 0; i < processor.numUserRegisters; i++)
 			processor.writeRegister(i, 0);
-
 		// initialize PC and SP according
 		processor.writeRegister(Processor.regPC, initialPC);
 		processor.writeRegister(Processor.regSP, initialSP);
-
 		// initialize the first two argument registers to argc and argv
 		processor.writeRegister(Processor.regA0, argc);
 		processor.writeRegister(Processor.regA1, argv);
@@ -380,7 +544,6 @@ public class UserProcess {
 				return i;
 			}
 		}
-		
 		return -1;
 	}
 
