@@ -1,158 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="3d10f398-bc65-4d80-a70f-57742791c66e" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/bin/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/proj2/Testing/except1.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/proj2/Testing/exec1.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/proj2/Testing/execarg1.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/proj2/Testing/exit1.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/proj2/Testing/join1.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/proj2/Testing/snake.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/proj2/Testing/write1.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/proj2/Testing/write10.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/proj2/Testing/write4.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/test/readline.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/test/rm.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/test/script" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/test/sh.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/test/sort.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/test/start.s" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/test/stdarg.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/test/stdio.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/test/stdio.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/test/stdlib.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/test/stdlib.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/test/strcat.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/test/strcmp.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/test/strcpy.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/test/strlen.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/test/strncmp.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/test/syscall.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/test/va-mips.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/threads/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/threads/package.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/userprog/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/userprog/package.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/vm/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/bin/nachos/vm/package.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/nachos/proj2/Testing/except1.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/nachos/proj2/Testing/exec1.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/nachos/proj2/Testing/execarg1.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/nachos/proj2/Testing/exit1.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/nachos/proj2/Testing/join1.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/nachos/proj2/Testing/snake.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/nachos/proj2/Testing/write1.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/nachos/proj2/Testing/write10.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/nachos/proj2/Testing/write4.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/.idea/c1cheng_l2yang_c1yu.iml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/production/c1cheng_l2yang_c1yu/.classpath" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/production/c1cheng_l2yang_c1yu/nachos/threads/package.html" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/production/c1cheng_l2yang_c1yu/nachos/userprog/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/production/c1cheng_l2yang_c1yu/nachos/userprog/package.html" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/production/c1cheng_l2yang_c1yu/nachos/vm/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/production/c1cheng_l2yang_c1yu/nachos/vm/package.html" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/readline.c" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/rm.c" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/script" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/sh.c" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/sort.c" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/start.s" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/stdarg.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/stdio.c" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/stdio.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/stdlib.c" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/stdlib.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/strcat.c" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/strcmp.c" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/strcpy.c" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/strlen.c" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/strncmp.c" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/syscall.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/va-mips.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/bin/.idea/modules.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/bin/.idea/vcs.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/.idea/workspace.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/.project" beforeDir="false" afterPath="$PROJECT_DIR$/bin/.project" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/Makefile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/README" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/README" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/ag/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/ag/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/ag/package.html" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/ag/package.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/bin/nachos" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/bin/nachos" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/machine/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/machine/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/machine/package.html" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/machine/package.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/network/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/network/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/network/package.html" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/network/package.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/proj0/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/proj0/Makefile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/proj0/nachos.conf" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/proj0/nachos.conf" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/proj1/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/proj1/Makefile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/proj1/nachos.conf" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/proj1/nachos.conf" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/proj1/production/c1cheng_l2yang_c1yu/META-INF/c1cheng_l2yang_c1yu.kotlin_module" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/proj1/production/c1cheng_l2yang_c1yu/META-INF/c1cheng_l2yang_c1yu.kotlin_module" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/proj2/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/proj2/Makefile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/proj2/nachos.conf" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/proj2/nachos.conf" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/proj3/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/proj3/Makefile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/proj3/nachos.conf" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/proj3/nachos.conf" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/security/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/security/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/security/package.html" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/security/package.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/test/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/test/Makefile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/test/assert.c" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/test/assert.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/test/atoi.c" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/test/atoi.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/test/cat.c" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/test/cat.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/test/cp.c" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/test/cp.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/test/echo.c" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/test/echo.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/test/halt.c" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/test/halt.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/test/matmult.c" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/test/matmult.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/test/memcpy.c" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/test/memcpy.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/test/memset.c" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/test/memset.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/test/mv.c" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/test/mv.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/test/printf.c" beforeDir="false" afterPath="$PROJECT_DIR$/bin/nachos/test/printf.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/threads/KThread$A.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/build/production/c1cheng_l2yang_c1yu/nachos/threads/KThread$B.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/machine/Machine.java" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/machine/Machine.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/machine/StubFileSystem.java" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/machine/StubFileSystem.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/Makefile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/assert.c" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/assert.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/atoi.c" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/atoi.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/cat.c" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/cat.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/cp.c" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/cp.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/echo.c" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/echo.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/halt.c" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/halt.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/matmult.c" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/matmult.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/memcpy.c" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/memcpy.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/memset.c" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/memset.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/mv.c" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/mv.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/printf.c" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/printf.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/production/c1cheng_l2yang_c1yu/.idea/misc.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/production/c1cheng_l2yang_c1yu/bin/nachos/test/production/c1cheng_l2yang_c1yu/nachos/threads/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/production/c1cheng_l2yang_c1yu/nachos/machine/ElevatorTest$1.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/production/c1cheng_l2yang_c1yu/nachos/machine/Interrupt$1.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/production/c1cheng_l2yang_c1yu/nachos/machine/Processor$1.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/production/c1cheng_l2yang_c1yu/nachos/threads/RoundRobinScheduler$1.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/readline.c" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/readline.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/rm.c" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/rm.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/script" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/script" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/sh.c" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/sh.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/sort.c" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/sort.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/start.s" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/start.s" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/stdarg.h" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/stdarg.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/stdio.c" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/stdio.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/stdio.h" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/stdio.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/stdlib.c" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/stdlib.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/stdlib.h" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/stdlib.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/strcat.c" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/strcat.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/strcmp.c" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/strcmp.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/strcpy.c" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/strcpy.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/strlen.c" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/strlen.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/strncmp.c" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/strncmp.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/syscall.h" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/syscall.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/test/va-mips.h" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/test/va-mips.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/threads/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/threads/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/threads/Alarm.java" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/threads/Alarm.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/userprog/UserKernel.java" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/userprog/UserKernel.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nachos/userprog/UserProcess.java" beforeDir="false" afterPath="$PROJECT_DIR$/nachos/userprog/UserProcess.java" afterDir="false" />
-    </list>
+    <list default="true" id="3d10f398-bc65-4d80-a70f-57742791c66e" name="Default Changelist" comment="" />
     <ignored path="$PROJECT_DIR$/out/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -166,20 +15,84 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="false">
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/nachos/userprog/UserKernel.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="307">
-              <caret line="116" column="13" selection-start-line="116" selection-start-column="13" selection-end-line="116" selection-end-column="13" />
+            <state relative-caret-position="821">
+              <caret line="91" column="16" selection-start-line="91" selection-start-column="16" selection-end-line="91" selection-end-column="16" />
+              <folding>
+                <element signature="e#815#816#0" expanded="true" />
+                <element signature="e#844#845#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/nachos/userprog/UserProcess.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="215">
-              <caret line="472" column="26" selection-start-line="472" selection-start-column="16" selection-end-line="472" selection-end-column="26" />
+            <state relative-caret-position="365">
+              <caret line="575" column="29" selection-start-line="575" selection-start-column="29" selection-end-line="575" selection-end-column="29" />
+              <folding>
+                <element signature="imports" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/nachos/machine/Processor.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="8970">
+              <caret line="618" column="29" selection-start-line="618" selection-start-column="29" selection-end-line="618" selection-end-column="29" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/nachos/machine/Kernel.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="105">
+              <caret line="7" column="22" selection-start-line="7" selection-start-column="22" selection-end-line="7" selection-end-column="22" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/nachos/machine/TCB.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="1395">
+              <caret line="98" column="20" selection-start-line="98" selection-start-column="20" selection-end-line="98" selection-end-column="20" />
+              <folding>
+                <element signature="e#3110#3111#0" expanded="true" />
+                <element signature="e#3135#3136#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/nachos/machine/Lib.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="975">
+              <caret line="76" column="18" selection-start-line="76" selection-start-column="18" selection-end-line="76" selection-end-column="18" />
+              <folding>
+                <element signature="e#2537#2538#0" expanded="true" />
+                <element signature="e#2570#2571#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/nachos/threads/KThread.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="600">
+              <caret line="40" selection-start-line="40" selection-end-line="40" />
+              <folding>
+                <element signature="e#3525#3526#0" expanded="true" />
+                <element signature="e#3547#3548#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -189,7 +102,23 @@
   <component name="FindInProjectRecents">
     <findStrings>
       <find>exit</find>
+      <find>userprocess</find>
+      <find>checkuser</find>
+      <find>Testing the console device. Typed characters</find>
       <find>handleread</find>
+      <find>selftest</find>
+      <find>selfTest()</find>
+      <find>selfTest</find>
+      <find>Testing the console device</find>
+      <find>grader</find>
+      <find>console user-check grader</find>
+      <find>handleSyscall</find>
+      <find>selfte</find>
+      <find>length</find>
+      <find>Lib.debug</find>
+      <find>handlewrite</find>
+      <find>passed</find>
+      <find>handleunlink</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -201,8 +130,12 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/nachos/userprog/UserProcess.java" />
+        <option value="$PROJECT_DIR$/nachos/machine/Machine.java" />
+        <option value="$PROJECT_DIR$/nachos/machine/Processor.java" />
+        <option value="$PROJECT_DIR$/nachos/threads/KThread.java" />
+        <option value="$PROJECT_DIR$/nachos/threads/ThreadedKernel.java" />
         <option value="$PROJECT_DIR$/nachos/userprog/UserKernel.java" />
+        <option value="$PROJECT_DIR$/nachos/userprog/UserProcess.java" />
       </list>
     </option>
   </component>
@@ -215,8 +148,6 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="PackagesPane" />
-      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -229,16 +160,12 @@
               <item name="c1cheng_l2yang_c1yu" type="462c0819:PsiDirectoryNode" />
               <item name="nachos" type="462c0819:PsiDirectoryNode" />
             </path>
-            <path>
-              <item name="c1cheng_l2yang_c1yu" type="b2602c69:ProjectViewProjectNode" />
-              <item name="c1cheng_l2yang_c1yu" type="462c0819:PsiDirectoryNode" />
-              <item name="nachos" type="462c0819:PsiDirectoryNode" />
-              <item name="userprog" type="462c0819:PsiDirectoryNode" />
-            </path>
           </expand>
           <select />
         </subPane>
       </pane>
+      <pane id="Scope" />
+      <pane id="PackagesPane" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -267,7 +194,7 @@
     <configuration name="Proj2" type="Application" factoryName="Application">
       <option name="MAIN_CLASS_NAME" value="nachos.machine.Machine" />
       <module name="c1cheng_l2yang_c1yu" />
-      <option name="PROGRAM_PARAMETERS" value="nachos -x write1.coff" />
+      <option name="PROGRAM_PARAMETERS" value="nachos -x snake.coff" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/nachos/proj2" />
       <method v="2">
         <option name="Make" enabled="true" />
@@ -302,24 +229,26 @@
       <option name="presentableId" value="Default" />
       <updated>1557786669289</updated>
       <workItem from="1557786671629" duration="79000" />
-      <workItem from="1557786834835" duration="1625000" />
+      <workItem from="1557786834835" duration="11007000" />
+      <workItem from="1557859419603" duration="40000" />
+      <workItem from="1557871296542" duration="882000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1704000" />
+    <option name="totallyTimeSpent" value="12008000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="0" width="1680" height="1050" extended-state="0" />
+    <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.16422467" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.16788767" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Image Layers" order="2" />
       <window_info id="Designer" order="3" />
       <window_info id="UI Designer" order="4" />
       <window_info id="Capture Tool" order="5" />
       <window_info id="Favorites" order="6" side_tool="true" />
-      <window_info anchor="bottom" id="Messages" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
       <window_info anchor="bottom" id="Run" order="2" weight="0.32959184" />
@@ -330,8 +259,9 @@
       <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
       <window_info anchor="bottom" id="Version Control" order="8" />
       <window_info anchor="bottom" id="Database Changes" order="9" />
-      <window_info active="true" anchor="bottom" id="Terminal" order="10" visible="true" weight="0.32959184" />
+      <window_info anchor="bottom" id="Terminal" order="10" weight="0.32959184" />
       <window_info anchor="bottom" id="Event Log" order="11" side_tool="true" />
+      <window_info anchor="bottom" id="Messages" order="12" weight="0.32959184" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
@@ -347,17 +277,106 @@
     <option name="version" value="1" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/nachos/userprog/UserKernel.java">
+    <entry file="file://$PROJECT_DIR$/nachos/machine/Machine.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="307">
-          <caret line="116" column="13" selection-start-line="116" selection-start-column="13" selection-end-line="116" selection-end-column="13" />
+        <state relative-caret-position="209">
+          <caret line="56" lean-forward="true" selection-start-line="56" selection-end-line="56" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/nachos/threads/SquadMatch.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-1111">
+          <caret line="12" column="13" selection-start-line="12" selection-start-column="13" selection-end-line="12" selection-end-column="13" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/nachos/threads/ThreadedKernel.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="116">
+          <caret line="41" column="30" lean-forward="true" selection-start-line="41" selection-start-column="30" selection-end-line="41" selection-end-column="30" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/nachos/userprog/UThread.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="203">
+          <caret line="30" column="28" selection-start-line="30" selection-start-column="28" selection-end-line="30" selection-end-column="28" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0_211.jdk/Contents/Home/src.zip!/java/lang/Thread.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="331">
+          <caret line="747" column="19" selection-start-line="747" selection-start-column="19" selection-end-line="747" selection-end-column="19" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/nachos/machine/Processor.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="8970">
+          <caret line="618" column="29" selection-start-line="618" selection-start-column="29" selection-end-line="618" selection-end-column="29" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/nachos/machine/Kernel.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="105">
+          <caret line="7" column="22" selection-start-line="7" selection-start-column="22" selection-end-line="7" selection-end-column="22" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/nachos/machine/TCB.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1395">
+          <caret line="98" column="20" selection-start-line="98" selection-start-column="20" selection-end-line="98" selection-end-column="20" />
+          <folding>
+            <element signature="e#3110#3111#0" expanded="true" />
+            <element signature="e#3135#3136#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/nachos/machine/Lib.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="975">
+          <caret line="76" column="18" selection-start-line="76" selection-start-column="18" selection-end-line="76" selection-end-column="18" />
+          <folding>
+            <element signature="e#2537#2538#0" expanded="true" />
+            <element signature="e#2570#2571#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/nachos/threads/KThread.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="600">
+          <caret line="40" selection-start-line="40" selection-end-line="40" />
+          <folding>
+            <element signature="e#3525#3526#0" expanded="true" />
+            <element signature="e#3547#3548#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/nachos/userprog/UserProcess.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="215">
-          <caret line="472" column="26" selection-start-line="472" selection-start-column="16" selection-end-line="472" selection-end-column="26" />
+        <state relative-caret-position="365">
+          <caret line="575" column="29" selection-start-line="575" selection-start-column="29" selection-end-line="575" selection-end-column="29" />
+          <folding>
+            <element signature="imports" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/nachos/userprog/UserKernel.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="821">
+          <caret line="91" column="16" selection-start-line="91" selection-start-column="16" selection-end-line="91" selection-end-column="16" />
+          <folding>
+            <element signature="e#815#816#0" expanded="true" />
+            <element signature="e#844#845#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>

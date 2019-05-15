@@ -27,8 +27,8 @@ public class UserKernel extends ThreadedKernel {
 
 		console = new SynchConsole(Machine.console());
 
-		physicalPageList = new LinkedList<Integer>();
 		physicalPageSema = new Semaphore(1);
+		physicalPageList = new LinkedList<Integer>();
 		for(int i = 0; i<Machine.processor().getNumPhysPages(); i++){
 			physicalPageList.add(i);
 		}

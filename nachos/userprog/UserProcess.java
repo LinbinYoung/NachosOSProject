@@ -33,8 +33,8 @@ public class UserProcess {
 		int numPhysPages = Machine.processor().getNumPhysPages();
 		//todo: page table entries
 		pageTable = new TranslationEntry[numPhysPages];
-		for (int i = 0; i < numPhysPages; i++)
-			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
+//		for (int i = 0; i < numPhysPages; i++)
+//			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
 
 		//Todo: do we need +2 here?
 		fileDescTable = new OpenFile[s_fileTableSize ];
@@ -159,14 +159,39 @@ public class UserProcess {
 
 		byte[] memory = Machine.processor().getMemory();
 
-		// for now, just assume that virtual addresses equal physical addresses
-		if (vaddr < 0 || vaddr >= memory.length)
-			return 0;
+		if (vaddr < 0 || vaddr >= memory.length) return 0;
 
-		int amount = Math.min(length, memory.length - vaddr);
-		System.arraycopy(memory, vaddr, data, offset, amount);
-
-		return amount;
+		int vpn = vaddr/pageSize;
+		int off = vaddr%pageSize;
+		int first = offset;
+		// TODO: should check whether it's valid bit???
+		int paddr = 0;
+		int read = 0;
+		int amount = Math.min(length, numPages*pageSize - vaddr);
+		while(amount > 0){
+			if (!pageTable[vpn].valid) break;
+			paddr = pageTable[vpn].ppn * pageSize + off;
+			read = Math.min(amount, pageSize - off);
+			System.arraycopy(memory, paddr, data, offset, read);
+			off = 0;
+			offset += read;
+			amount -= read;
+			vpn++;
+		}
+		return offset - first;
+//		Lib.assertTrue(offset >= 0 && length >= 0
+//				&& offset + length <= data.length);
+//
+//		byte[] memory = Machine.processor().getMemory();
+//
+//		// for now, just assume that virtual addresses equal physical addresses
+//		if (vaddr < 0 || vaddr >= memory.length)
+//			return 0;
+//
+//		int amount = Math.min(length, memory.length - vaddr);
+//		System.arraycopy(memory, vaddr, data, offset, amount);
+//
+//		return amount;
 	}
 
 	/**
@@ -200,15 +225,38 @@ public class UserProcess {
 				&& offset + length <= data.length);
 
 		byte[] memory = Machine.processor().getMemory();
-
-		// for now, just assume that virtual addresses equal physical addresses
 		if (vaddr < 0 || vaddr >= memory.length)
 			return 0;
-
-		int amount = Math.min(length, memory.length - vaddr);
-		System.arraycopy(data, offset, memory, vaddr, amount);
-
-		return amount;
+		int vpn = vaddr/pageSize;
+		int off = vaddr%pageSize;
+		int first = offset;
+		int paddr = 0;
+		int write = 0;
+		int amount = Math.min(length, numPages * pageSize - vaddr);
+		while(amount > 0){
+			if(!pageTable[vpn].valid) break;
+			paddr = pageTable[vpn].ppn * pageSize + off;
+			write = Math.min(amount, pageSize-off);
+			System.arraycopy(data, offset, memory, paddr, amount);
+			off = 0;
+			vpn++;
+			offset += write;
+			amount -= write;
+		}
+		return offset-first;
+//		Lib.assertTrue(offset >= 0 && length >= 0
+//				&& offset + length <= data.length);
+//
+//		byte[] memory = Machine.processor().getMemory();
+//
+//		// for now, just assume that virtual addresses equal physical addresses
+//		if (vaddr < 0 || vaddr >= memory.length)
+//			return 0;
+//
+//		int amount = Math.min(length, memory.length - vaddr);
+//		System.arraycopy(data, offset, memory, vaddr, amount);
+//
+//		return amount;
 	}
 
 	/**
@@ -400,7 +448,7 @@ public class UserProcess {
 	 * Handle the create() system call
 	 */
 	private int handleCreate(int vaddr){
-//		if(vaddr < 0) return -1;
+		if(vaddr < 0) return -1;
 		String file_name = readVirtualMemoryString(vaddr, 256);
 		if(file_name == null) return -1;
 
@@ -429,7 +477,7 @@ public class UserProcess {
 	 * Returns the new file descriptor, or -1 if an error occurred.
 	 */
 	private int handleOpen(int vaddr){
-//		if(vaddr < 0) return -1;
+		if(vaddr < 0) return -1;
 
 		String file_name = readVirtualMemoryString(vaddr, 256);
 		if(file_name == null) return -1;
@@ -569,7 +617,7 @@ public class UserProcess {
 	 * Returns 0 on success, or -1 if an error occurred.
 	 */
 	private int handleUnlink(int vaddr){
-//		if(vaddr < 0) return -1;
+		if(vaddr < 0) return -1;
 		String file_name = readVirtualMemoryString(vaddr, 256);
 		int to_close = -1;
 		for(int i = 0; i<this.fileDescTable.length; i++){
