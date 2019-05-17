@@ -27,6 +27,7 @@ public class UserKernel extends ThreadedKernel {
 		console = new SynchConsole(Machine.console());
 		
 		phyPagelLock = new Lock();
+		procLock = new Lock();
 		
 		freePhyPages = new LinkedList<Integer>();
 		for (int i =0; i < Machine.processor().getNumPhysPages(); ++i)
@@ -135,11 +136,15 @@ public class UserKernel extends ThreadedKernel {
 	private static Coff dummy1 = null;
 	
 	
-	// process Lock
+	// free physical page Lock
 	public static Lock phyPagelLock;
 	
 	// Free physical pages
 	public static LinkedList<Integer> freePhyPages;
+	
+	// Lock for process
+	public static Lock procLock;
+	
 }
 
 
