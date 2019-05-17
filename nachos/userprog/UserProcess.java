@@ -7,8 +7,6 @@ import nachos.vm.*;
 
 import java.io.EOFException;
 
-import javafx.scene.LightBase;
-
 /**
  * Encapsulates the state of a user process that is not contained in its user
  * thread (or threads). This includes its address translation state, a file
