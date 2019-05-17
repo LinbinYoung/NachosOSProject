@@ -24,8 +24,8 @@ public class UserKernel extends ThreadedKernel {
 	
 	public void initialize(String[] args) {
 		super.initialize(args);
-		sem = new Semaphore(1);
-		sem_for_id = new Semaphore(1);
+		lock_page = new Semaphore(1);
+		lock_id = new Semaphore(1);
 		Counter = 0;
 		mPhyPage = new LinkedList<>();
 		for (int i = 0; i < Machine.processor().getNumPhysPages(); i ++) {
@@ -126,8 +126,8 @@ public class UserKernel extends ThreadedKernel {
 	public static SynchConsole console;
 	public static LinkedList<Integer> mPhyPage = new LinkedList<>();
 	public static int Counter;
-	public static Semaphore sem_for_id;
+	public static Semaphore lock_id;
 //	public static Lock protected_lock = new Lock();
 //	public static Condition c_lock = new Condition(protected_lock);
-	public static Semaphore sem;
+	public static Semaphore lock_page;
 }

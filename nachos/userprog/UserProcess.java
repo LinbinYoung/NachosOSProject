@@ -5,6 +5,7 @@ import nachos.threads.*;
 import nachos.userprog.*;
 import nachos.vm.*;
 import java.io.EOFException;
+import java.util.HashMap;
 
 /**
  * Encapsulates the state of a user process that is not contained in its user
@@ -28,7 +29,12 @@ public class UserProcess {
 		this.file_arr[0] = UserKernel.console.openForReading();
 		this.file_arr[1] = UserKernel.console.openForWriting();
 		int numPhysPages = Machine.processor().getNumPhysPages();
+		UserKernel.lock_id.P();
+		Process_ID = UserKernel.Counter++;
+		UserKernel.lock_id.V();
 		pageTable = new TranslationEntry[numPhysPages];
+		child = new HashMap<>();
+		// parent = new HashMap<>();
 		/**
 		 * Allocate a new translation entry with the specified initial state.
 		 * 
@@ -186,7 +192,12 @@ public class UserProcess {
 			while (length > 0) {
 				if (phy_offset + length > pageSize) {
 					int can_write_length = pageSize - phy_offset;
-					System.arraycopy(memory, phy_addr, data, start, can_write_length);
+					try {
+						System.arraycopy(memory, phy_addr, data, start, can_write_length);
+					}catch(Exception e) {
+						//case arraycopy fails
+						return success_read;
+					}
 					start = start + can_write_length;
 					length = length - can_write_length;
 					success_read += can_write_length;
@@ -208,9 +219,13 @@ public class UserProcess {
 					entry.used = true;
 				}else {
 					int can_write_length = length;
-					System.arraycopy(memory, phy_addr, data, start, can_write_length);
+					try {
+						System.arraycopy(memory, phy_addr, data, start, can_write_length);
+					}catch(Exception e) {
+						return success_read;
+					}
 					success_read += can_write_length;
-					System.out.println(success_read);
+//					System.out.println(success_read);
 					start = start + can_write_length;
 					length = length - can_write_length;
 					entry.used = false;
@@ -277,7 +292,11 @@ public class UserProcess {
 			// write page by page
 			if (phy_offset + length > pageSize) {
 				int can_to_memory = pageSize - phy_offset;
-				System.arraycopy(data, start, memory, phy_addr, can_to_memory);
+				try {
+					System.arraycopy(data, start, memory, phy_addr, can_to_memory);
+				}catch(Exception e) {
+					return success_write;
+				}
 				success_write += can_to_memory;
 				start = start + can_to_memory;
 				length = length - can_to_memory;
@@ -300,7 +319,11 @@ public class UserProcess {
 				entry.used = true;
 			}else {
 				int can_to_memory = length;
-				System.arraycopy(data, start, memory, phy_addr, can_to_memory);
+				try {
+					System.arraycopy(data, start, memory, phy_addr, can_to_memory);
+				}catch(Exception e) {
+					return success_write;
+				}
 				success_write += can_to_memory;
 				start = start + can_to_memory;
 				length = length - can_to_memory;
@@ -415,9 +438,9 @@ public class UserProcess {
 				// Here we need to map the vpn to ppn
 				// Get the ppn from the Pagetable
 				TranslationEntry entry = pageTable[vpn];
-				UserKernel.sem.P();
+				UserKernel.lock_page.P();
 				Integer free_page = UserKernel.mPhyPage.removeFirst();
-				UserKernel.sem.V();
+				UserKernel.lock_page.V();
 				if (free_page == null) {
 					// No available page
 					unloadSections();
@@ -446,10 +469,10 @@ public class UserProcess {
 			for (int i = numPages - 9; i < numPages; i ++) {
 				TranslationEntry entry = pageTable[i];
 				//acquire lock, no race condition
-				UserKernel.sem.P();
+				UserKernel.lock_page.P();
 				Integer free_page = UserKernel.mPhyPage.removeFirst();
 				//release lock
-				UserKernel.sem.V();
+				UserKernel.lock_page.V();
 				if (free_page == null) {
 					// No available page
 					unloadSections();
@@ -480,9 +503,9 @@ public class UserProcess {
 			TranslationEntry entry = pageTable[i];
 			if (entry.valid) {
 				//valid false: we can ignore the page
-				UserKernel.sem.P();
+				UserKernel.lock_page.P();
 				UserKernel.mPhyPage.add(entry.ppn);
-				UserKernel.sem.V();
+				UserKernel.lock_page.V();
 			}
 		}//end for
 	}
@@ -494,6 +517,7 @@ public class UserProcess {
 	 * stack, set the A0 and A1 registers to argc and argv, respectively, and
 	 * initialize all other registers to 0.
 	 */
+	
 	public void initRegisters() {
 		Processor processor = Machine.processor();
 		// by default, everything's 0
@@ -510,7 +534,13 @@ public class UserProcess {
 	/**
 	 * Handle the halt() system call.
 	 */
+	
 	private int handleHalt() {
+		// Check if it is root process
+		System.out.println("halt");
+		if (this.Process_ID != 0) {
+			return -1;
+		}
 		Machine.halt();
 		Lib.assertNotReached("Machine.halt() did not halt machine!");
 		return 0;
@@ -522,17 +552,42 @@ public class UserProcess {
 	private int handleExit(int status) {
 		Machine.autoGrader().finishingCurrentProcess(status);
 		Lib.debug(dbgProcess, "UserProcess.handleExit (" + status + ")");
+		System.out.println("exit");
         // Do not remove this call to the autoGrader...
-		// for now, unconditionally terminate with just one process
+		//close all file descriptors
+		for (int i = 0; i < 16; i ++) {
+			handleClose(i);
+		}
+		System.out.println("Finish Close");
+		//Delete all memory
+		unloadSections();
+		coff.close();
+		if (parent != null) {
+			this.status = status;
+		}
+		//wake up parent
+		if (this.parent != null) {
+			boolean intStatus = Machine.interrupt().disable();
+			parent.thread.ready();
+			Machine.interrupt().restore(intStatus);
+		}
+		// How to tell it is the last process
+		UserKernel.lock_id.P();
+		if (this.Process_ID == UserKernel.Counter) {
+			UserKernel.lock_id.V();
+			Kernel.kernel.terminate();
+		}
 		Kernel.kernel.terminate();
 		return 0;
 	}
 
 	private int handleOpen(int vaddr) {
 		// Get the filename
+		System.out.println("open");
 		if (vaddr < 0) return -1;
 		String get_filename = new UserProcess().readVirtualMemoryString(vaddr, 256);
 		if (get_filename == null) {
+			//Try to opern a file that does not exist
 			return -1;
 		}
 		
@@ -549,6 +604,7 @@ public class UserProcess {
 
 	private int handleCreate(int vaddr) {
 		// Get the filename
+		System.out.println("create");
 		String get_filename = new UserProcess().readVirtualMemoryString(vaddr, 256);
 		if (get_filename == null) {
 			return -1;
@@ -561,6 +617,7 @@ public class UserProcess {
 			if (this.file_arr[i] != null) {
 				//check if the file exists or not
 				if (this.file_arr[i].getName().equals(get_filename)) {
+					//The file already exists
 					return -1;
 				}
 			}else {
@@ -572,7 +629,8 @@ public class UserProcess {
 	}
 
 	private int handleRead(int fileDescriptor, int vaddr, int length) {
-		if (fileDescriptor < 0 || fileDescriptor == 1 || fileDescriptor >= 16) {
+		System.out.println("read");
+		if (fileDescriptor < 0 || fileDescriptor > 15){
 			return -1;
 		}
 		if (length < 0 || vaddr < 0) {
@@ -604,7 +662,8 @@ public class UserProcess {
 	}
 	
 	private int handleWrite(int fileDescriptor, int vaddr, int length) {
-		if (fileDescriptor <= 0 || fileDescriptor >= 16) {
+		System.out.println("write");
+		if (fileDescriptor < 0 || fileDescriptor > 15){
 			return -1;
 		}
 		if (length < 0 || vaddr < 0) {
@@ -633,9 +692,9 @@ public class UserProcess {
 		return res;
 	}
 
-	
 	private int handleClose(int fileDescriptor) {
-		if (fileDescriptor < 0 || fileDescriptor >= 16) {
+		System.out.println("close");
+		if (fileDescriptor < 0 || fileDescriptor > 15) {
 			return -1;
 		}
 		OpenFile instan = this.file_arr[fileDescriptor];
@@ -647,8 +706,8 @@ public class UserProcess {
 		return 0;
 	}
 	
-	
 	private int handleUnlink(int vaddr) {
+		System.out.println("unlink");
 		String get_filename = new UserProcess().readVirtualMemoryString(vaddr, 256);
 		if (get_filename == null) {
 			return -1;
@@ -670,6 +729,79 @@ public class UserProcess {
 		}
 	}
 	
+	private int handleExec(int file_addr, int argc, int vaddr) {
+		/*
+		 * filename: object .coff file
+		 */
+		System.out.println("exec");
+		if (file_addr < 0 || argc < 0 || vaddr < 0) {
+			//check corner case
+			return -1;
+		}
+		String get_filename = new UserProcess().readVirtualMemoryString(file_addr, 256);
+		if (get_filename == null || !get_filename.split("\\.")[1].equals("coff")) {
+			System.out.println("Fail to get the target file or do not have .coff extension");
+			return -1;
+		}
+		String[] argv = new String[argc];
+		// 4 bytes for argv[] pointer;
+		byte[] pointer = new byte[4];
+		for (int i = 0; i < argc; i ++) {
+			//fetch the pointer
+			if (this.readVirtualMemory(vaddr+i*4, pointer) != 4) {
+				System.out.println("Fail to get the pointer");
+				return -1;
+			}
+			String arg_fetch = this.readVirtualMemoryString(byteArrayToInt(pointer), 256);
+			argv[i] = arg_fetch;
+		}
+		UserProcess c_process = UserProcess.newUserProcess();
+		//execute program in c_process
+		if(!c_process.execute(get_filename, argv)) {
+			return -1;
+		}
+		//store the parent info to child
+		c_process.parent = this;
+		//store the child info to parent
+		this.child.put(c_process.Process_ID, c_process);
+		//return child PID
+		return c_process.Process_ID;
+	}
+	
+	private int handleJoin(int PID, int vaddr) {
+		/*
+		 * Wait Until the child completes
+		 */
+		//suspend the current process associate with one thread
+		//first check if the child process is in the hash table
+		System.out.println("join");
+		if (!this.child.containsKey(PID)) {
+			return -1;
+		}
+		//fetch the child process
+		UserProcess c_p = this.child.get(PID);
+		c_p.thread.join();
+		//now store all status of child process to memory
+		//how to tell if the child process exit
+		if (c_p.status != null) {
+			// How to tell whether child process exit  
+			return -1;
+		}
+		byte[] status_contents = intToByteArray(c_p.status);
+		if (this.writeVirtualMemory(vaddr, status_contents) != 4) {
+			return -1;
+		}else {
+			return 0;
+		}
+	}
+	
+	public static byte[] intToByteArray(int a) {
+	    return new byte[] {(byte) ((a >> 24) & 0xFF), (byte) ((a >> 16) & 0xFF), (byte) ((a >> 8) & 0xFF),(byte) (a & 0xFF)};
+	}
+	
+	public static int byteArrayToInt(byte[] b) {
+	    return   b[3] & 0xFF | (b[2] & 0xFF) << 8 | (b[1] & 0xFF) << 16 | (b[0] & 0xFF) << 24;
+	}
 	private static final int syscallHalt = 0, syscallExit = 1, syscallExec = 2,
 			syscallJoin = 3, syscallCreate = 4, syscallOpen = 5,
 			syscallRead = 6, syscallWrite = 7, syscallClose = 8,
@@ -755,6 +887,10 @@ public class UserProcess {
 			return handleClose(a0);
 		case syscallUnlink:
 			return handleUnlink(a0);
+		case syscallExec:
+			return handleExec(a0, a1, a2);
+		case syscallJoin:
+			return handleJoin(a0, a1);
 		default:
 			Lib.debug(dbgProcess, "Unknown syscall " + syscall);
 			Lib.assertNotReached("Unknown system call!");
@@ -814,4 +950,12 @@ public class UserProcess {
 	private static final char dbgProcess = 'a';
 	
 	private OpenFile[] file_arr;
+	
+	private int Process_ID;
+	
+	private UserProcess parent;
+	
+	private HashMap<Integer, UserProcess> child;
+	
+	private Integer status; //initialized it in handle exit
 }
