@@ -34,7 +34,7 @@ public class UserProcess {
 		UserKernel.lock_id.V();
 		pageTable = new TranslationEntry[numPhysPages];
 		child = new HashMap<>();
-		// parent = new HashMap<>();
+		this.exit_flag = 0;
 		/**
 		 * Allocate a new translation entry with the specified initial state.
 		 * 
@@ -46,7 +46,7 @@ public class UserProcess {
 		 * @param dirty the dirty bit.
 		 */
 		for (int i = 0; i < numPhysPages; i++) {
-			TranslationEntry instan = new TranslationEntry(i, i, false, false, false, false);
+			TranslationEntry instan = new TranslationEntry(i, i, true, false, false, false);
 			pageTable[i] = instan;
 		}
 	}
@@ -88,6 +88,9 @@ public class UserProcess {
 	public boolean execute(String name, String[] args) {
 		if (!load(name, args))
 			return false;
+		UserKernel.lock_id.P();
+		Process_ID = UserKernel.Running_Counter++;
+		UserKernel.lock_id.V();
 		thread = new UThread(this);
 		thread.setName(name).fork();
 		return true;
@@ -97,6 +100,7 @@ public class UserProcess {
 	 * Save the state of this process in preparation for a context switch.
 	 * Called by <tt>UThread.saveState()</tt>.
 	 */
+	
 	public void saveState() {
 	}
 
@@ -126,7 +130,6 @@ public class UserProcess {
 		Lib.assertTrue(maxLength >= 0);
 		byte[] bytes = new byte[maxLength + 1];
 		int bytesRead = readVirtualMemory(vaddr, bytes);
-//		System.out.println(bytesRead+"LINBINYANG");
 		for (int length = 0; length < bytesRead; length++) {
 			if (bytes[length] == 0)
 				return new String(bytes, 0, length);
@@ -165,23 +168,21 @@ public class UserProcess {
 	public int readVirtualMemory(int vaddr, byte[] data, int offset, int length) {
 		Lib.assertTrue(offset >= 0 && length >= 0 && offset + length <= data.length);
 		byte[] memory = Machine.processor().getMemory();
-		// for now, just assume that virtual addresses equal physical addresses
 		if (vaddr < 0 || vaddr >= memory.length) {
 			return 0;
 		}
-		int success_read = 0;
-		//Get vpn from vaddr
+		int success_read = 0; //Get vpn from vaddr
 		int vpn = Processor.pageFromAddress(vaddr);
-		int phy_offset = Processor.offsetFromAddress(vaddr);
-		//Use vpn to get the entry of ppn
+		int phy_offset = Processor.offsetFromAddress(vaddr); //Use vpn to get the entry of ppn
 		TranslationEntry entry = this.pageTable[vpn];
 		int phy_addr = pageSize*entry.ppn + phy_offset;
 		if (phy_addr >= memory.length || phy_addr < 0) {
 			System.out.println("Invalid Physical Address");
 			return 0;
 		}
-//		System.out.println(entry.valid);
-//		System.out.println("MICHAEL");
+		if (!entry.valid) {
+			return 0;
+		}
 //		if (entry.valid) {
 			// we can not ignore this page
 			// read data page by page
@@ -214,6 +215,9 @@ public class UserProcess {
 					phy_addr = entry.ppn*pageSize + phy_offset;
 					if (phy_addr >= memory.length || phy_addr < 0) {
 						System.out.println("Invalid Physical Address");
+						return success_read;
+					}
+					if (!entry.valid) {
 						return success_read;
 					}
 					entry.used = true;
@@ -268,21 +272,18 @@ public class UserProcess {
 	public int writeVirtualMemory(int vaddr, byte[] data, int offset, int length) {
 		Lib.assertTrue(offset >= 0 && length >= 0 && offset + length <= data.length);
 		byte[] memory = Machine.processor().getMemory();
-		// for now, just assume that virtual addresses equal physical addresses
 		if (vaddr < 0 || vaddr >= memory.length)
 			return 0;
-		int success_write = 0;
-		//Get vpn from vaddr
+		int success_write = 0; //Get vpn from vaddr
 		int vpn = Processor.pageFromAddress(vaddr);
-		int phy_offset = Processor.offsetFromAddress(vaddr);
-		//Use vpn to get the entry of ppn
+		int phy_offset = Processor.offsetFromAddress(vaddr); //Use vpn to get the entry of ppn
 		TranslationEntry entry = this.pageTable[vpn];
 		int phy_addr = pageSize*entry.ppn + phy_offset;
 		if (phy_addr >= memory.length || phy_addr < 0) {
 			System.out.println("Invalid Physical Address");
 			return 0;
 		}
-		if (entry.readOnly) {
+		if (entry.readOnly || !entry.valid) {
 			// we cannot write data to memory
 			return 0;
 		}
@@ -312,7 +313,7 @@ public class UserProcess {
 					System.out.println("Invalid Physical Address");
 					return success_write;
 				}
-				if (entry.readOnly) {
+				if (entry.readOnly  || !entry.valid) {
 					// we cannot write data to memory
 					return success_write;
 				}
@@ -443,7 +444,9 @@ public class UserProcess {
 				UserKernel.lock_page.V();
 				if (free_page == null) {
 					// No available page
+				//	UserKernel.lock_page.P();
 					unloadSections();
+				//	UserKernel.lock_page.V();
 					return false;
 				}else{
 					/**
@@ -475,7 +478,9 @@ public class UserProcess {
 				UserKernel.lock_page.V();
 				if (free_page == null) {
 					// No available page
+				//	UserKernel.lock_page.P();
 					unloadSections();
+				//	UserKernel.lock_page.V();
 					return false;
 				}else {
 					/**
@@ -549,48 +554,40 @@ public class UserProcess {
 	/**
 	 * Handle the exit() system call.
 	 */
-	private int handleExit(int status) {
+	private void handleExit(int status) {
 		Machine.autoGrader().finishingCurrentProcess(status);
 		Lib.debug(dbgProcess, "UserProcess.handleExit (" + status + ")");
-		System.out.println("exit");
         // Do not remove this call to the autoGrader...
 		//close all file descriptors
 		for (int i = 0; i < 16; i ++) {
 			handleClose(i);
+			this.file_arr[i] = null;
 		}
-		System.out.println("Finish Close");
 		//Delete all memory
+		//UserKernel.lock_page.P();
 		unloadSections();
+		//UserKernel.lock_page.V();
 		coff.close();
-		if (parent != null) {
-			this.status = status;
-		}
-		//wake up parent
 		if (this.parent != null) {
-			boolean intStatus = Machine.interrupt().disable();
-			parent.thread.ready();
-			Machine.interrupt().restore(intStatus);
+			Integer value = (this.exit_flag == 1)? null : status;
+			this.status = value;
+			KThread.finish();
 		}
-		// How to tell it is the last process
 		UserKernel.lock_id.P();
-		if (this.Process_ID == UserKernel.Counter) {
-			UserKernel.lock_id.V();
+		if(UserKernel.Running_Counter-- == 1) {
 			Kernel.kernel.terminate();
 		}
-		Kernel.kernel.terminate();
-		return 0;
+		UserKernel.lock_id.V();
 	}
 
 	private int handleOpen(int vaddr) {
 		// Get the filename
-		System.out.println("open");
 		if (vaddr < 0) return -1;
 		String get_filename = new UserProcess().readVirtualMemoryString(vaddr, 256);
 		if (get_filename == null) {
 			//Try to opern a file that does not exist
 			return -1;
 		}
-		
 		for (int i = 0; i < this.file_arr.length; i ++) {
 			if (this.file_arr[i] == null) {
 				OpenFile instan = ThreadedKernel.fileSystem.open(get_filename, false);
@@ -693,7 +690,7 @@ public class UserProcess {
 	}
 
 	private int handleClose(int fileDescriptor) {
-		System.out.println("close");
+		//System.out.println("close");
 		if (fileDescriptor < 0 || fileDescriptor > 15) {
 			return -1;
 		}
@@ -744,15 +741,12 @@ public class UserProcess {
 			return -1;
 		}
 		String[] argv = new String[argc];
-		// 4 bytes for argv[] pointer;
 		byte[] pointer = new byte[4];
 		for (int i = 0; i < argc; i ++) {
-			//fetch the pointer
 			if (this.readVirtualMemory(vaddr+i*4, pointer) != 4) {
-				System.out.println("Fail to get the pointer");
 				return -1;
 			}
-			String arg_fetch = this.readVirtualMemoryString(byteArrayToInt(pointer), 256);
+			String arg_fetch = this.readVirtualMemoryString(Lib.bytesToInt(pointer, 0), 256);
 			argv[i] = arg_fetch;
 		}
 		UserProcess c_process = UserProcess.newUserProcess();
@@ -774,7 +768,6 @@ public class UserProcess {
 		 */
 		//suspend the current process associate with one thread
 		//first check if the child process is in the hash table
-		System.out.println("join");
 		if (!this.child.containsKey(PID)) {
 			return -1;
 		}
@@ -783,25 +776,18 @@ public class UserProcess {
 		c_p.thread.join();
 		//now store all status of child process to memory
 		//how to tell if the child process exit
-		if (c_p.status != null) {
-			// How to tell whether child process exit  
-			return -1;
+		if (c_p.exit_flag == 1) {
+			// exit with an unhandled exception 
+			return 0;
 		}
-		byte[] status_contents = intToByteArray(c_p.status);
+		byte[] status_contents = Lib.bytesFromInt(c_p.status);
 		if (this.writeVirtualMemory(vaddr, status_contents) != 4) {
 			return -1;
 		}else {
-			return 0;
+			return 1;
 		}
 	}
 	
-	public static byte[] intToByteArray(int a) {
-	    return new byte[] {(byte) ((a >> 24) & 0xFF), (byte) ((a >> 16) & 0xFF), (byte) ((a >> 8) & 0xFF),(byte) (a & 0xFF)};
-	}
-	
-	public static int byteArrayToInt(byte[] b) {
-	    return   b[3] & 0xFF | (b[2] & 0xFF) << 8 | (b[1] & 0xFF) << 16 | (b[0] & 0xFF) << 24;
-	}
 	private static final int syscallHalt = 0, syscallExit = 1, syscallExec = 2,
 			syscallJoin = 3, syscallCreate = 4, syscallOpen = 5,
 			syscallRead = 6, syscallWrite = 7, syscallClose = 8,
@@ -874,7 +860,7 @@ public class UserProcess {
 		case syscallHalt:
 			return handleHalt();
 		case syscallExit:
-			return handleExit(a0);
+			handleExit(a0);
 		case syscallOpen:
 			return handleOpen(a0);
 		case syscallCreate:
@@ -920,8 +906,9 @@ public class UserProcess {
 			break;
 
 		default:
-			Lib.debug(dbgProcess, "Unexpected exception: "
-					+ Processor.exceptionNames[cause]);
+			this.exit_flag = 1;
+			handleExit(233);
+			Lib.debug(dbgProcess, "Unexpected exception: " + Processor.exceptionNames[cause]);
 			Lib.assertNotReached("Unexpected exception");
 		}
 	}
@@ -958,4 +945,6 @@ public class UserProcess {
 	private HashMap<Integer, UserProcess> child;
 	
 	private Integer status; //initialized it in handle exit
+	
+	private int exit_flag;
 }

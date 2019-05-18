@@ -201,6 +201,7 @@ public class KThread {
 		toBeDestroyed = currentThread;
 		currentThread.status = statusFinished;
 		if (KThread.currentThread().joinThread != null) {
+			System.out.println("=============HI==============");
 			KThread temp = KThread.currentThread().joinThread;
 			KThread.currentThread().joinThread = null;
 			temp.ready();
