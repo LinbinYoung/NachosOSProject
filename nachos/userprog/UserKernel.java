@@ -28,7 +28,11 @@ public class UserKernel extends ThreadedKernel {
 		console = new SynchConsole(Machine.console());
 
 		physicalPageSema = new Semaphore(1);
-		physicalPageList = new LinkedList<Integer>();
+		physicalPageList = new LinkedList<>();
+		processCountLock = new Lock();
+		childStatusMapLock = new Lock();
+		processCount = 0;
+		nextPID = 0;
 		for(int i = 0; i<Machine.processor().getNumPhysPages(); i++){
 			physicalPageList.add(i);
 		}
@@ -133,6 +137,9 @@ public class UserKernel extends ThreadedKernel {
 	private static Coff dummy1 = null;
 
 	public static List<Integer> physicalPageList;
-
 	public static Semaphore physicalPageSema;
+	public static Lock processCountLock;
+	public static int processCount;
+	public static int nextPID;
+	public static Lock childStatusMapLock;
 }
