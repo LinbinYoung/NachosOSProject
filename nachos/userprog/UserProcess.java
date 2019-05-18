@@ -6,6 +6,8 @@ import nachos.userprog.*;
 import nachos.vm.*;
 
 import java.io.EOFException;
+import java.util.HashMap;
+import java.util.Hashtable;
 
 /**
  * Encapsulates the state of a user process that is not contained in its user
@@ -29,11 +31,16 @@ public class UserProcess {
 //		for (int i = 0; i < numPhysPages; i++)
 //			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
 		
-		this.pid = this.processNum++;
+		UserKernel.procLock.acquire();
+		this.pid = UserKernel.procIDCounter++;
+		UserKernel.numOfRunningProcess++;
+		UserKernel.procLock.release();
 		
 		openFileTable = new OpenFile[16];
 		openFileTable[0] = UserKernel.console.openForReading();
 		openFileTable[1] = UserKernel.console.openForWriting();
+		
+		
 	}
 
 	/**
@@ -71,6 +78,7 @@ public class UserProcess {
 	public boolean execute(String name, String[] args) {
 		if (!load(name, args))
 			return false;
+	
 
 		thread = new UThread(this);
 		thread.setName(name).fork();
@@ -452,7 +460,46 @@ public class UserProcess {
 
 		Lib.debug(dbgProcess, "UserProcess.handleExit (" + status + ")");
 		// for now, unconditionally terminate with just one process
-		Kernel.kernel.terminate();
+		// Kernel.kernel.terminate();
+		
+
+		// Close all files in file table
+		for (int i = 2; i < 16; ++i) {
+			if (this.openFileTable[i] != null) {
+				this.openFileTable[i].close();
+				this.openFileTable[i] = null;
+			}
+		}
+		// Delete all memory by calling UnloadSections()
+		this.unloadSections();
+		
+		// Close the coff by calling coff.close()
+		this.coff.close();
+		
+		// If it has a parent process, save the status for parent
+		// Wake up parent if sleeping
+		System.out.println("========"+UserKernel.numOfRunningProcess);
+		
+		UserKernel.procLock.acquire();
+		--UserKernel.numOfRunningProcess;
+		UserKernel.procLock.release();
+		
+		if (this.parentProcess != null) {
+			System.out.println("=======The parent Process is not null");
+			this.exitStatus = status;
+			this.normalExit = true;
+			this.thread.finish();
+			
+		}
+		// In case of last process, call kernel.kernel.terminate()
+		// Close KThread by calling KThread.finish()
+		if (UserKernel.numOfRunningProcess == 0) {
+			System.out.println("=======This is the last process");
+			this.exitStatus = status;
+			this.normalExit = true;
+			Kernel.kernel.terminate();
+		}
+		//KThread.finish();
 
 		return 0;
 	}
@@ -637,17 +684,42 @@ public class UserProcess {
 		
 		UserProcess childProcess = UserProcess.newUserProcess();
 		childProcess.parentProcess = this;
+		this.childMap.put(new Integer(childProcess.pid), childProcess);
 		
-		UserKernel.procLock.acquire();
+		//UserKernel.procLock.acquire();
 		boolean sucess =  childProcess.execute(fileName, args);
 		if (sucess == false) {
 			UserKernel.procLock.release();
 			return -1;
 		}
-		UserKernel.procLock.release();
+		//UserKernel.procLock.release();
 		return childProcess.pid;
 	}
 	
+	private int handleJoin(int childPID, int viAddr) {
+		
+		
+		Integer cPid = new Integer(childPID);
+		if (!this.childMap.containsKey(cPid))
+			return -1;
+		// Sleep on child
+	    // Get and set child status
+		UserProcess child =  this.childMap.get(cPid);
+		child.thread.join();
+		// can't join again
+		childMap.remove(cPid);
+		
+		
+		if (child.normalExit) {
+			int childExitStatus = child.exitStatus.intValue();
+			int byteWrite = this.writeVirtualMemory(viAddr, Lib.bytesFromInt(childExitStatus));
+			if (byteWrite < 4) return -1;
+			return 1;
+		}
+	
+		return 0;
+		
+	}
 
 	private static final int syscallHalt = 0, syscallExit = 1, syscallExec = 2,
 			syscallJoin = 3, syscallCreate = 4, syscallOpen = 5,
@@ -737,7 +809,8 @@ public class UserProcess {
 			return handleUnlink(a0);
 		case syscallExec:
 			return handleExec(a0, a1, a2);
-			
+		case syscallJoin:
+			return handleJoin(a0, a1);
 		
 		
 
@@ -770,6 +843,9 @@ public class UserProcess {
 			break;
 
 		default:
+			
+			System.out.println("======This is default handle exception");
+			this.handleExit(999);
 			Lib.debug(dbgProcess, "Unexpected exception: "
 					+ Processor.exceptionNames[cause]);
 			Lib.assertNotReached("Unexpected exception");
@@ -809,7 +885,14 @@ public class UserProcess {
 	private UserProcess parentProcess;
 	
 	// pid
-	private static int processNum = 0;
 	private int pid;
-			
+	
+	// Condition to wake up the parent
+	private Integer exitStatus;
+	private boolean normalExit;
+	
+	
+	// keep the reference of the child
+	private Hashtable<Integer, UserProcess> childMap = new Hashtable<Integer,UserProcess> ();
+	
 }

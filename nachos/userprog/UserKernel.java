@@ -145,6 +145,10 @@ public class UserKernel extends ThreadedKernel {
 	// Lock for process
 	public static Lock procLock;
 	
+	
+	public static int numOfRunningProcess = 0;
+	public static int procIDCounter = 0;
+	
 }
 
 
