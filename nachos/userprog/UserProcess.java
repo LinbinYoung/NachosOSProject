@@ -487,8 +487,8 @@ public class UserProcess {
 		if (this.parentProcess != null) {
 			System.out.println("=======The parent Process is not null");
 			this.exitStatus = status;
-			this.normalExit = true;
-			this.thread.finish();
+			this.normalExit =  (status == 999)? false : true;
+			KThread.finish();
 			
 		}
 		// In case of last process, call kernel.kernel.terminate()
@@ -496,7 +496,7 @@ public class UserProcess {
 		if (UserKernel.numOfRunningProcess == 0) {
 			System.out.println("=======This is the last process");
 			this.exitStatus = status;
-			this.normalExit = true;
+			this.normalExit =  (status == 999)? false : true;
 			Kernel.kernel.terminate();
 		}
 		//KThread.finish();
@@ -689,10 +689,11 @@ public class UserProcess {
 		//UserKernel.procLock.acquire();
 		boolean sucess =  childProcess.execute(fileName, args);
 		if (sucess == false) {
-			UserKernel.procLock.release();
+			//UserKernel.procLock.release();
 			return -1;
 		}
 		//UserKernel.procLock.release();
+		
 		return childProcess.pid;
 	}
 	
@@ -710,7 +711,7 @@ public class UserProcess {
 		childMap.remove(cPid);
 		
 		
-		if (child.normalExit) {
+		if (child.normalExit == true) {
 			int childExitStatus = child.exitStatus.intValue();
 			int byteWrite = this.writeVirtualMemory(viAddr, Lib.bytesFromInt(childExitStatus));
 			if (byteWrite < 4) return -1;
