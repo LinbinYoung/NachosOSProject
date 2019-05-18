@@ -26,7 +26,6 @@ public class UserKernel extends ThreadedKernel {
 		super.initialize(args);
 		lock_page = new Semaphore(1);
 		lock_id = new Semaphore(1);
-		lock_run_id = new Semaphore(1);
 		Counter = 0;
 		Running_Counter = 0;
 		mPhyPage = new LinkedList<>();
@@ -131,5 +130,4 @@ public class UserKernel extends ThreadedKernel {
 	public static int Running_Counter;
 	public static Semaphore lock_id;
 	public static Semaphore lock_page;
-	public static Semaphore lock_run_id;
 }

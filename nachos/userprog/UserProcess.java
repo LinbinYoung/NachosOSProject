@@ -32,7 +32,7 @@ public class UserProcess {
 		UserKernel.lock_id.P();
 		Process_ID = UserKernel.Counter++;
 		UserKernel.lock_id.V();
-		pageTable = new TranslationEntry[numPhysPages];
+//		pageTable = new TranslationEntry[numPhysPages];
 		child = new HashMap<>();
 		this.exit_flag = 0;
 		/**
@@ -45,10 +45,10 @@ public class UserProcess {
 		 * @param used the used bit.
 		 * @param dirty the dirty bit.
 		 */
-		for (int i = 0; i < numPhysPages; i++) {
-			TranslationEntry instan = new TranslationEntry(i, i, true, false, false, false);
-			pageTable[i] = instan;
-		}
+//		for (int i = 0; i < numPhysPages; i++) {
+//			TranslationEntry instan = new TranslationEntry(i, i, false, false, false, false);
+//			pageTable[i] = instan;
+//		}
 	}
 
 	/**
@@ -173,6 +173,9 @@ public class UserProcess {
 		}
 		int success_read = 0; //Get vpn from vaddr
 		int vpn = Processor.pageFromAddress(vaddr);
+		if (vpn < 0 || vpn >= this.pageTable.length) {
+			return 0;
+		}
 		int phy_offset = Processor.offsetFromAddress(vaddr); //Use vpn to get the entry of ppn
 		TranslationEntry entry = this.pageTable[vpn];
 		int phy_addr = pageSize*entry.ppn + phy_offset;
@@ -229,7 +232,6 @@ public class UserProcess {
 						return success_read;
 					}
 					success_read += can_write_length;
-//					System.out.println(success_read);
 					start = start + can_write_length;
 					length = length - can_write_length;
 					entry.used = false;
@@ -276,6 +278,9 @@ public class UserProcess {
 			return 0;
 		int success_write = 0; //Get vpn from vaddr
 		int vpn = Processor.pageFromAddress(vaddr);
+		if (vpn < 0 || vpn >= this.pageTable.length) {
+			return 0;
+		}
 		int phy_offset = Processor.offsetFromAddress(vaddr); //Use vpn to get the entry of ppn
 		TranslationEntry entry = this.pageTable[vpn];
 		int phy_addr = pageSize*entry.ppn + phy_offset;
@@ -428,6 +433,19 @@ public class UserProcess {
 			Lib.debug(dbgProcess, "\tinsufficient physical memory");
 			return false;
 		}
+		this.pageTable = new TranslationEntry[this.numPages];
+		int ppn;
+		UserKernel.lock_page.P();
+		for (int i = 0; i < this.numPages; i ++) {
+			try {
+				ppn = UserKernel.mPhyPage.removeFirst();
+			}catch(IndexOutOfBoundsException e) {
+				this.unloadSections();
+				return false;
+			}
+			this.pageTable[i] = new TranslationEntry(i, ppn, true, false, false, false);
+		}
+		UserKernel.lock_page.V();
 		// load sections
 		for (int s = 0; s < coff.getNumSections(); s++) {
 			CoffSection section = coff.getSection(s);
@@ -444,9 +462,9 @@ public class UserProcess {
 				UserKernel.lock_page.V();
 				if (free_page == null) {
 					// No available page
-				//	UserKernel.lock_page.P();
+					UserKernel.lock_page.P();
 					unloadSections();
-				//	UserKernel.lock_page.V();
+					UserKernel.lock_page.V();
 					return false;
 				}else{
 					/**
@@ -478,9 +496,9 @@ public class UserProcess {
 				UserKernel.lock_page.V();
 				if (free_page == null) {
 					// No available page
-				//	UserKernel.lock_page.P();
+					UserKernel.lock_page.P();
 					unloadSections();
-				//	UserKernel.lock_page.V();
+					UserKernel.lock_page.V();
 					return false;
 				}else {
 					/**
@@ -508,9 +526,9 @@ public class UserProcess {
 			TranslationEntry entry = pageTable[i];
 			if (entry.valid) {
 				//valid false: we can ignore the page
-				UserKernel.lock_page.P();
+				// UserKernel.lock_page.P();
 				UserKernel.mPhyPage.add(entry.ppn);
-				UserKernel.lock_page.V();
+				// UserKernel.lock_page.V();
 			}
 		}//end for
 	}
@@ -554,7 +572,7 @@ public class UserProcess {
 	/**
 	 * Handle the exit() system call.
 	 */
-	private void handleExit(int status) {
+	private int handleExit(int status) {
 		Machine.autoGrader().finishingCurrentProcess(status);
 		Lib.debug(dbgProcess, "UserProcess.handleExit (" + status + ")");
         // Do not remove this call to the autoGrader...
@@ -564,26 +582,29 @@ public class UserProcess {
 			this.file_arr[i] = null;
 		}
 		//Delete all memory
-		//UserKernel.lock_page.P();
+		UserKernel.lock_page.P();
 		unloadSections();
-		//UserKernel.lock_page.V();
+		UserKernel.lock_page.V();
 		coff.close();
+		UserKernel.lock_id.P();
+		UserKernel.Running_Counter--;
+		UserKernel.lock_id.V();
 		if (this.parent != null) {
-			Integer value = (this.exit_flag == 1)? null : status;
-			this.status = value;
+			this.status = status;
 			KThread.finish();
 		}
 		UserKernel.lock_id.P();
-		if(UserKernel.Running_Counter-- == 1) {
+		if(UserKernel.Running_Counter == 0) {
 			Kernel.kernel.terminate();
 		}
 		UserKernel.lock_id.V();
+		return 0;
 	}
 
 	private int handleOpen(int vaddr) {
 		// Get the filename
 		if (vaddr < 0) return -1;
-		String get_filename = new UserProcess().readVirtualMemoryString(vaddr, 256);
+		String get_filename = this.readVirtualMemoryString(vaddr, 256);
 		if (get_filename == null) {
 			//Try to opern a file that does not exist
 			return -1;
@@ -602,7 +623,7 @@ public class UserProcess {
 	private int handleCreate(int vaddr) {
 		// Get the filename
 		System.out.println("create");
-		String get_filename = new UserProcess().readVirtualMemoryString(vaddr, 256);
+		String get_filename = this.readVirtualMemoryString(vaddr, 256);
 		if (get_filename == null) {
 			return -1;
 		}
@@ -626,7 +647,7 @@ public class UserProcess {
 	}
 
 	private int handleRead(int fileDescriptor, int vaddr, int length) {
-		System.out.println("read");
+		// System.out.println("read");
 		if (fileDescriptor < 0 || fileDescriptor > 15){
 			return -1;
 		}
@@ -659,7 +680,7 @@ public class UserProcess {
 	}
 	
 	private int handleWrite(int fileDescriptor, int vaddr, int length) {
-		System.out.println("write");
+		// System.out.println("write");
 		if (fileDescriptor < 0 || fileDescriptor > 15){
 			return -1;
 		}
@@ -704,8 +725,8 @@ public class UserProcess {
 	}
 	
 	private int handleUnlink(int vaddr) {
-		System.out.println("unlink");
-		String get_filename = new UserProcess().readVirtualMemoryString(vaddr, 256);
+		// System.out.println("unlink");
+		String get_filename = this.readVirtualMemoryString(vaddr, 256);
 		if (get_filename == null) {
 			return -1;
 		}
@@ -730,12 +751,12 @@ public class UserProcess {
 		/*
 		 * filename: object .coff file
 		 */
-		System.out.println("exec");
+		// System.out.println("exec");
 		if (file_addr < 0 || argc < 0 || vaddr < 0) {
 			//check corner case
 			return -1;
 		}
-		String get_filename = new UserProcess().readVirtualMemoryString(file_addr, 256);
+		String get_filename = this.readVirtualMemoryString(file_addr, 256);
 		if (get_filename == null || !get_filename.split("\\.")[1].equals("coff")) {
 			System.out.println("Fail to get the target file or do not have .coff extension");
 			return -1;
@@ -860,7 +881,7 @@ public class UserProcess {
 		case syscallHalt:
 			return handleHalt();
 		case syscallExit:
-			handleExit(a0);
+			return handleExit(a0);
 		case syscallOpen:
 			return handleOpen(a0);
 		case syscallCreate:
