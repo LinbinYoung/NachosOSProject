@@ -95,11 +95,13 @@ public class UserProcess {
 						if (!writeHelper(bufferAddr, readPoint)){this.pipeLock.release(); return -1;}
 						else count -= readPoint;
 					}
+					pipeLock.acquire();
 					pipeCond.sleep();
+					pipeLock.release();
 				}
 			}
 			this.pipeLock.release();
-			System.out.println("pipeBuffer write: \n"+ Lib.bytesToString(this.pipeBuffer,0,256));
+//			System.out.println("pipeBuffer write: \n"+ Lib.bytesToString(this.pipeBuffer,0,256));
 			return result;
 		}
 
@@ -108,6 +110,7 @@ public class UserProcess {
 			int cur_read= writeVirtualMemory(bufferAddr, this.pipeBuffer, readPoint, count);
 			if (cur_read != count) return false;
 			freeSize += cur_read;
+			pipeCond.wake();
 			readPoint = (readPoint+cur_read)%pageSize;
 			return true;
 		}
@@ -123,7 +126,7 @@ public class UserProcess {
 			count = Math.min(pageSize - freeSize, count);
 			if (readPoint + count < pageSize) {
 				if (!readHelper(bufferAddr, count)){ this.pipeLock.release(); return -1;}
-				System.out.println("pipeBuffer read: \n"+readVirtualMemoryString(bufferAddr,256));
+//				System.out.println("pipeBuffer read: \n"+readVirtualMemoryString(bufferAddr,256));
 //				String read = readVirtualMemoryString(bufferAddr,256);
 //				String write = Lib.bytesToString(this.pipeBuffer,0,256);
 //				for(int i = 0; i<256; i++){
@@ -623,6 +626,7 @@ public class UserProcess {
 		OpenFile o_file = null;
 		Pipe p_file = null;
 		if(file_name.toLowerCase().startsWith("/pipe/")) {
+//			TODO: re-enable this
 			if (UserProcess.pipeMap.containsKey(file_name)) return -1;
 			p_file = new Pipe(file_name);
 		}else {
@@ -713,8 +717,9 @@ public class UserProcess {
 		int bytes_read = 0, cur_ker_read = 0, cur_pro_write = 0;
 
 		while(count > 0){
-			if(file !=null) cur_ker_read = file.read(buffer, 0, Math.min(count, pageSize));
-			else cur_ker_read = p_file.readPipe(bufferAddr, count);
+			if(file == null) return p_file.readPipe(bufferAddr, count);
+
+			cur_ker_read = file.read(buffer, 0, Math.min(count, pageSize));
 			if(cur_ker_read <= 0) return -1;
 
 			cur_pro_write = writeVirtualMemory(bufferAddr, buffer, 0, cur_ker_read);
@@ -794,9 +799,15 @@ public class UserProcess {
 	 */
 	private int handleClose(int fileDescriptor){
 		if(fileDescriptor < 0 || fileDescriptor>=s_fileTableSize) return -1;
-		OpenFile file = this.fileDescTable[fileDescriptor];
-		if(file == null) return -1;
-		file.close();
+		if(this.fileDescTable[fileDescriptor] == null) return -1;
+
+		if(!(this.fileDescTable[fileDescriptor] instanceof Pipe)){
+			OpenFile file = this.fileDescTable[fileDescriptor];
+			file.close();
+		}else{
+			Pipe file = (Pipe) this.fileDescTable[fileDescriptor];
+			file.close();
+		}
 		this.fileDescTable[fileDescriptor] = null;
 		return 0;
 	}
@@ -822,6 +833,7 @@ public class UserProcess {
 				handleClose(i);
 			}
 		}
+		//TODO: UserProcess.pipeMap.remove(file.getName());
 //		if(to_close != -1) handleClose(to_close);
 		if(ThreadedKernel.fileSystem.remove(file_name)) return 0;
 		return -1;
