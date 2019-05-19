@@ -38,6 +38,10 @@ public class UserProcess {
 			UserProcess.pipeMap.put(name, this);
 		}
 
+		public String getName(){
+			return this.name;
+		}
+
 		public byte[] pipeBuffer;
 		public int writePoint;
 		public int readPoint;
@@ -100,27 +104,36 @@ public class UserProcess {
 
 		public boolean readHelper(int bufferAddr, int count){
 
-			int cur_write = readVirtualMemory(bufferAddr, this.pipeBuffer, writePoint, count);
-			if (cur_write != count) return false;
-			freeSize -= cur_write;
-			writePoint = (writePoint+cur_write)%pageSize;
+			int cur_read= writeVirtualMemory(bufferAddr, this.pipeBuffer, readPoint, count);
+			if (cur_read != count) return false;
+			freeSize += cur_read;
+			readPoint = (readPoint+cur_read)%pageSize;
 			return true;
-
-			int writeVirtualMemory(int vaddr, byte[] data, int offset, int length) {
 		}
-		public int readPipe(){
+		public int readPipe(int bufferAddr, int count){
 				/**@param vaddr the first byte of virtual memory to write.
 				 * @param data the array containing the data to transfer.
 				 * @param offset the first byte to transfer from the array.
 				 * @param length the number of bytes to transfer from the array to virtual
 				 * memory. */
-
-			writeVirtualMemory();
-			cur_ker_read = file.read(buffer, 0, Math.min(count, pageSize));
-			return -1;
-
-			cur_ker_read = file.read(buffer, 0, Math.min(count, pageSize));
-			if(cur_ker_read <= 0) return -1;
+			this.pipeLock.acquire();
+			//there is enough in the pipe buffer
+			int result = count;
+			count = Math.min(pageSize - freeSize, count);
+			if (readPoint + count < pageSize) {
+				if (!readHelper(bufferAddr, count)){ this.pipeLock.release(); return -1;}
+				else result = count;
+			}else{
+				int first_read = pageSize - readPoint;
+				if (!readHelper(bufferAddr, count)){ this.pipeLock.release(); return -1;}
+				else{
+					bufferAddr += first_read;
+					count -= first_read;
+				}
+				if (!readHelper(bufferAddr, count)){ this.pipeLock.release(); return -1;}
+			}
+			this.pipeLock.release();
+			return result;
 		}
 	}
 		/**
@@ -599,9 +612,16 @@ public class UserProcess {
 		String file_name = readVirtualMemoryString(vaddr, 256);
 		if(file_name == null) return -1;
 
-		OpenFile file = ThreadedKernel.fileSystem.open(new String(file_name), true);
-		if (file == null) return -1;
-//		System.out.println("c1");
+		OpenFile o_file = null;
+		Pipe p_file = null;
+		if(file_name.toLowerCase().startsWith("/pipe/")) {
+			if (UserProcess.pipeMap.containsKey(file_name)) return -1;
+			p_file = new Pipe(file_name);
+		}else {
+			o_file = ThreadedKernel.fileSystem.open(new String(file_name), true);
+			if (o_file == null) return -1;
+			//		System.out.println("c1");
+		}
 		int empty_ind = -1;
 		for (int i = 2; i < s_fileTableSize; i++) {
 			if (this.fileDescTable[i] == null) {
@@ -611,7 +631,7 @@ public class UserProcess {
 		}
 		if (empty_ind == -1) return -1;
 
-		this.fileDescTable[empty_ind] = file;
+		this.fileDescTable[empty_ind] = o_file != null? o_file : p_file;
 		return empty_ind;
 	}
 
@@ -639,9 +659,17 @@ public class UserProcess {
 		}
 		if (empty_ind == -1) return -1;
 
-		OpenFile file = ThreadedKernel.fileSystem.open(new String(file_name), false);
-		if(file == null) return -1;
-		this.fileDescTable[empty_ind] = file;
+		OpenFile o_file = null;
+		Pipe p_file = null;
+		if(file_name.toLowerCase().startsWith("/pipe/")) {
+			p_file = UserProcess.pipeMap.getOrDefault(file_name, null);
+			if(p_file == null) return -1;
+		}else {
+			o_file = ThreadedKernel.fileSystem.open(new String(file_name), false);
+			if (o_file == null) return -1;
+			//		System.out.println("c1");
+		}
+		this.fileDescTable[empty_ind] = o_file!=null?o_file:p_file;
 		return empty_ind;
 	}
 
@@ -667,13 +695,18 @@ public class UserProcess {
 	 */
 	private int handleRead(int fileDescriptor, int bufferAddr, int count){
 		if(fileDescriptor < 0 || fileDescriptor == 1 || fileDescriptor>=s_fileTableSize || count < 0) return -1;
-		OpenFile file = this.fileDescTable[fileDescriptor];
-		if(file == null) return -1;
+		OpenFile file = null;
+		Pipe p_file = null;
+		if (!(this.fileDescTable[fileDescriptor] instanceof Pipe)) file = this.fileDescTable[fileDescriptor];
+		else p_file = (Pipe)this.fileDescTable[fileDescriptor];
+		if(file == null && p_file == null) return -1;
 
 		byte[] buffer = new byte[pageSize];
 		int bytes_read = 0, cur_ker_read = 0, cur_pro_write = 0;
+
 		while(count > 0){
-			cur_ker_read = file.read(buffer, 0, Math.min(count, pageSize));
+			if(file !=null) cur_ker_read = file.read(buffer, 0, Math.min(count, pageSize));
+			else cur_ker_read = p_file.readPipe(bufferAddr, count);
 			if(cur_ker_read <= 0) return -1;
 
 			cur_pro_write = writeVirtualMemory(bufferAddr, buffer, 0, cur_ker_read);
@@ -707,8 +740,11 @@ public class UserProcess {
 			Lib.debug(dbgProcess, String.format("fD %d not in range or count < 0", fileDescriptor));
 			return -1;
 		}
-		OpenFile file = this.fileDescTable[fileDescriptor];
-		if(file == null) {
+		Pipe p_file = null;
+		OpenFile file = null;
+		if(!(this.fileDescTable[fileDescriptor] instanceof  Pipe)) file = this.fileDescTable[fileDescriptor];
+		else p_file = (Pipe)this.fileDescTable[fileDescriptor];
+		if(file == null && p_file == null) {
 			Lib.debug(dbgProcess, "file DNE");
 			return -1;
 		}
@@ -725,7 +761,9 @@ public class UserProcess {
 				return -1;
 			}
 
-			cur_ker_write = file.write(buffer, 0, cur_pro_read);
+			if (file!=null) cur_ker_write = file.write(buffer, 0, cur_pro_read);
+			else cur_ker_write = p_file.writePipe(bufferAddr, count);
+
 //			cur_ker_write = file.write(bufferAddr, buffer, 0, cur_pro_read);
 			if(cur_ker_write != cur_pro_read) {
 				Lib.debug(dbgProcess, "write not equal to read");
@@ -808,7 +846,7 @@ public class UserProcess {
 		coff.close();
 		//if it has a parent process, save the status for parent, join() will need it
 		if(this.parent != null) {
-			this.status = status;
+			this.parent.status = status;
 //			this.joinCondition.wakeAll();
 			//wake up parent if sleeping
 //			this.parent.thread.ready();
