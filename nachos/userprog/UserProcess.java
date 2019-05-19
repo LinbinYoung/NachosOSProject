@@ -34,6 +34,7 @@ public class UserProcess {
 			this.freeSize = pageSize;
 			this.pipeLock = new Lock();
 			this.pipeCond = new Condition(this.pipeLock);
+			this.name = name;
 			UserProcess.pipeMap.put(name, this);
 		}
 
@@ -43,13 +44,83 @@ public class UserProcess {
 		public int freeSize;
 		private Lock pipeLock;
 		private Condition pipeCond;
+		private String name;
+
+		public boolean writeHelper(int bufferAddr, int count){
+			int cur_write = readVirtualMemory(bufferAddr, this.pipeBuffer, writePoint, count);
+			if (cur_write != count) return false;
+			freeSize -= cur_write;
+			writePoint = (writePoint+cur_write)%pageSize;
+			return true;
+		}
 
 		public int writePipe(int bufferAddr, int count) {
-//			this.writeVirtualMemory();
-			int r = readVirtualMemory(bufferAddr, this.pipeBuffer, writePoint, Math.min(count, pageSize));
-//			cur_ker_write = file.write(buffer, 0, cur_pro_read);
+			this.pipeLock.acquire();
+			/** @param vaddr the first byte of virtual memory to read.
+	 			@param data the array where the data will be stored.
+			 	@param offset the first byte to write in the array.
+	 			@param length the number of bytes to transfer from virtual memory to the */
+			//there is enough in the pipe buffer
+			int result = count;
+			while(count >= 0){
+				if(freeSize >= count) {
+					if (pageSize - writePoint > count) {
+						if (!writeHelper(bufferAddr, count)){this.pipeLock.release(); return -1; }
+						else count = 0;
+					}else{
+						int first_write = pageSize - writePoint;
+						if (!writeHelper(bufferAddr, count)){this.pipeLock.release(); return -1;}
+						else{
+							bufferAddr += first_write;
+							count -= first_write;
+						}
+						if (!writeHelper(bufferAddr, count)){this.pipeLock.release(); return -1;}
+						else count = 0;
+					}
+				}else{
+					if(readPoint <= writePoint){
+						int first_write = pageSize - writePoint;
+						if (!writeHelper(bufferAddr, count)){this.pipeLock.release(); return -1;}
+						else{
+							bufferAddr += first_write;
+							count -= first_write;
+						}
+						if (!writeHelper(bufferAddr, readPoint)){this.pipeLock.release(); return -1;}
+						else count -= readPoint;
+					}else{
+						if (!writeHelper(bufferAddr, readPoint)){this.pipeLock.release(); return -1;}
+						else count -= readPoint;
+					}
+					pipeCond.sleep();
+				}
+			}
+			this.pipeLock.release();
+			return result;
+		}
 
+		public boolean readHelper(int bufferAddr, int count){
+
+			int cur_write = readVirtualMemory(bufferAddr, this.pipeBuffer, writePoint, count);
+			if (cur_write != count) return false;
+			freeSize -= cur_write;
+			writePoint = (writePoint+cur_write)%pageSize;
+			return true;
+
+			int writeVirtualMemory(int vaddr, byte[] data, int offset, int length) {
+		}
+		public int readPipe(){
+				/**@param vaddr the first byte of virtual memory to write.
+				 * @param data the array containing the data to transfer.
+				 * @param offset the first byte to transfer from the array.
+				 * @param length the number of bytes to transfer from the array to virtual
+				 * memory. */
+
+			writeVirtualMemory();
+			cur_ker_read = file.read(buffer, 0, Math.min(count, pageSize));
 			return -1;
+
+			cur_ker_read = file.read(buffer, 0, Math.min(count, pageSize));
+			if(cur_ker_read <= 0) return -1;
 		}
 	}
 		/**
@@ -225,9 +296,10 @@ public class UserProcess {
 		byte[] memory = Machine.processor().getMemory();
 
 		if (vaddr < 0 || vaddr >= memory.length) return 0;
-
-		int vpn = vaddr/pageSize;
-		int off = vaddr%pageSize;
+//		int vpn = vaddr/pageSize;
+//		int off = vaddr%pageSize;
+		int vpn = Processor.pageFromAddress(vaddr);
+		int off = Processor.offsetFromAddress(vaddr);
 		int first = offset;
 		// TODO: should check whether it's valid bit???
 		int paddr = 0;
@@ -839,7 +911,6 @@ public class UserProcess {
 	private int handleJoin(int processID, int status){ //int* status
 		UserProcess child = this.childMap.get(processID);
 		if(child == null) return -1; // PID doenst refer to a child process of the current process
-
 		this.childMap.remove(processID);
 		//Sleep on child
 		child.thread.join();
@@ -850,8 +921,9 @@ public class UserProcess {
 
 		// child exited as result of unhandled exception, return 0
 		UserKernel.childStatusMapLock.acquire();
-		if(this.childStatusMap.getOrDefault(processID, 10) == -1) return 0;
+		int child_exit = this.childStatusMap.getOrDefault(processID, 10);
 		UserKernel.childStatusMapLock.release();
+		if (child_exit == -1) return 0;
 
 		//in a number of cases, we are treating NULL=0x0 as a special case.
 		if (status != 0) {

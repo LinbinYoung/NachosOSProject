@@ -1,19 +1,18 @@
 /*
- * join1.c
- *
- * Simple program for testing join.  After exec-ing the child, it
- * waits for the child to exit.
- *
- * Geoff Voelker
- * 11/9/15
- */
+ *  * join1.c
+ *   *
+ *    * Simple program for testing join.  After exec-ing the child, it
+ *     * waits for the child to exit.
+ *      *
+ *       * Geoff Voelker
+ *        * 11/9/15
+ *         */
 
 #include "syscall.h"
 
-int
-main (int argc, char *argv[])
+int main (int argc, char *argv[])
 {
-    char *prog = "exit1.coff";
+    char *prog = "except1.coff";
     int pid, r, status = 0;
 
     printf ("execing %s...\n", prog);
