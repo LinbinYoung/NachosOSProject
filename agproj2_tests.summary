@@ -1,0 +1,11 @@
+------[                  Sun May 19 02:30:06 2019                  ]------
+------[  Grading Commit: 94ae427a7f7be4f72cb76c0d691aa3fff64ef4b2  ]------
+PASS : Test write1.c
+PASS : Test write4.c
+PASS : Test write10.c
+PASS : Test exec1.c
+PASS : Test join1.c
+PASS : Test execarg1.c
+PASS : Test except1.c
+PASS : Test exit1.c
+
