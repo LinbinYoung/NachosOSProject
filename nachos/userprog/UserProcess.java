@@ -558,12 +558,14 @@ public class UserProcess {
 	 * Release any resources allocated by <tt>loadSections()</tt>.
 	 */
 	protected void unloadSections() {
+		UserKernel.physicalPageSema.P();
 		for(int i = 0; i<this.pageTable.length; i++) {
 			if(this.pageTable[i] != null && this.pageTable[i].valid) {
 				this.pageTable[i].valid = false;
 				UserKernel.physicalPageList.add(pageTable[i].ppn);
 			}
 		}
+		UserKernel.physicalPageSema.V();
 	}
 
 	/**
