@@ -10,6 +10,8 @@ int main(int argc, char** argv)
 {
   int src, dst, amount;
 
+  argc = 3;
+  argv[1]
   if (argc!=3) {
     printf("Usage: cp <src> <dst>\n");
     return 1;
