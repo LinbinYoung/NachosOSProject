@@ -1,16 +1,3 @@
-/*
- * write10.c
- *
- * Test the write system call under a variety of good and bad
- * conditions, verifying output where possible.  Requires basic
- * functionality for open, creat, close, and read.
- *
- * Motto: Always check the return value of system calls.
- *
- * Geoff Voelker
- * 11/9/15
- */
-
 #include "stdio.h"
 #include "stdlib.h"
 
@@ -61,9 +48,9 @@ do_close (int fd) {
 }
 
 /*
- * Write "len" bytes of "buffer" into the file "fname".  "stride"
- * controls how many bytes are written in each system call.
- */
+ *  * Write "len" bytes of "buffer" into the file "fname".  "stride"
+ *   * controls how many bytes are written in each system call.
+ *    */
 void
 do_write (char *fname, char *buffer, int len, int stride)
 {
@@ -95,12 +82,12 @@ do_write (char *fname, char *buffer, int len, int stride)
 }
 
 /*
- * Validate that the bytes of the file "fname" are the same as the
- * bytes in "truth".  Only compare "len" number of bytes.  "buffer" is
- * the temporary buffer used to read the contents of the file.  It is
- * allocated by the caller and needs to be at least "len" number of
- * bytes in size.
- */
+ *  * Validate that the bytes of the file "fname" are the same as the
+ *   * bytes in "truth".  Only compare "len" number of bytes.  "buffer" is
+ *    * the temporary buffer used to read the contents of the file.  It is
+ *     * allocated by the caller and needs to be at least "len" number of
+ *      * bytes in size.
+ *       */
 void
 do_validate (char *fname, char *buffer, char *truth, int len)
 {
@@ -148,9 +135,72 @@ main ()
     int fd, r, len, i;
 
     /* write a small amount of data in a few different ways */
-    file = "write.out";
+    file = "/pipe/pepe";
     char *str = "roses are red\nviolets are blue\nI love Nachos\nand so do you\n";
     len = strlen (str);
+
+    /* write all bytes at once */
+    do_write (file, str, len, len);
+    do_validate (file, buffer, str, len);
+
+    /* write 8 bytes at a time */
+    do_write (file, str, len, 8);
+    do_validate (file, buffer, str, len);
+
+    /* write 1 byte at a time */
+    do_write (file, str, len, 1);
+    do_validate (file, buffer, str, len);
+
+    /* ok, now write lots of binary data.  if you want to manually
+ *      * confirm what was written, running "od -i ../test/binary.out"
+ *           * will print the file and interpret the data as integers. */
+    file = "/pipe/pepe";
+    len = sizeof (bigbuf1);  /* len in units of bytes, bigbufnum in ints */
+    for (i = 0; i < bigbufnum; i++) {
+	bigbuf1[i] = i;
+    }
+
+    /* write all at once */
+    do_write (file, (char *) bigbuf1, len, len);
+    do_validate (file, (char *) bigbuf2, (char *) bigbuf1, len);
+
+    /* write 128 bytes at a time */
+    do_write (file, (char *) bigbuf1, len, 128);
+    do_validate (file, (char *) bigbuf2, (char *) bigbuf1, len);
+
+    /* test corner cases for each of the three parameters to the write
+ *      * system call. */
+
+    /* test fd */
+    fd = -10, len = 10;  /* value of len should not matter... */
+    printf ("writing to an invalid fd (%d)...\n", fd);
+    r = write (fd, buffer, len);
+    if (r < 0) {
+	printf ("...passed (r = %d)\n", r);
+    } else {
+	printf ("...failed (r = %d, should be -1)\n", r);
+	exit (-2000);
+    }
+
+    fd = 256, len = 10;  /* value of len should not matter... */
+    printf ("writing to an invalid fd (%d)...\n", fd);
+    r = write (fd, buffer, len);
+    if (r < 0) {
+	printf ("...passed (r = %d)\n", r);
+    } else {
+	printf ("...failed (r = %d, should be -1)\n", r);
+	exit (-3000);
+    }
+
+    fd = 8, len = 10;  /* value of len should not matter... */
+    printf ("writing to an unopened fd (%d)...\n", fd);
+    r = write (fd, buffer, len);
+    if (r < 0) {
+	printf ("...passed (r = %d)\n", r);
+    } else {
+	printf ("...failed (r = %d, should be -1)\n", r);
+	exit (-4000);
+    }
 
     file = "/pipe/pepe";
     fd = do_creat (file);
@@ -165,6 +215,15 @@ main ()
 	exit (-5000);
     }
 
+    printf ("writing with an invalid buffer (should not crash, only return an error)...\n");
+    r = write (fd, (char *) 0xBADFFF, 10);
+    if (r < 0) {
+	printf ("...passed (r = %d)\n", r);
+    } else {
+	printf ("...failed (r = %d)\n", r);
+	exit (-6000);
+    }
+
     /* test count */
     printf ("writing with an invalid count (should not crash, only return an error)...\n");
     r = write (fd, (char *) str, -1);
@@ -174,5 +233,17 @@ main ()
 	printf ("...failed (r = %d)\n", r);
 	exit (-7000);
     }
+
+    printf ("writing with a buffer that extends beyond the end of the\n");
+    printf ("address space.  write should return an error.\n");
+    r = write (fd, (char *) 0, (80 * 1024));
+    if (r > 0) {
+	printf ("...failed (r = %d)\n", r);
+	exit (-8000);
+    } else {
+	printf ("...passed (r = %d)\n", r);
+    }
+    return 0;
 }
+
 
