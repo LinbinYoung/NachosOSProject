@@ -66,7 +66,7 @@ public class UserProcess {
 	 			@param length the number of bytes to transfer from virtual memory to the */
 			//there is enough in the pipe buffer
 			int result = count;
-			while(count >= 0){
+			while(count > 0){
 				if(freeSize >= count) {
 					if (pageSize - writePoint > count) {
 						if (!writeHelper(bufferAddr, count)){this.pipeLock.release(); return -1; }
@@ -99,6 +99,7 @@ public class UserProcess {
 				}
 			}
 			this.pipeLock.release();
+			System.out.println("pipeBuffer write: \n"+ Lib.bytesToString(this.pipeBuffer,0,256));
 			return result;
 		}
 
@@ -122,10 +123,15 @@ public class UserProcess {
 			count = Math.min(pageSize - freeSize, count);
 			if (readPoint + count < pageSize) {
 				if (!readHelper(bufferAddr, count)){ this.pipeLock.release(); return -1;}
-				else result = count;
+				System.out.println("pipeBuffer read: \n"+readVirtualMemoryString(bufferAddr,256));
+//				String read = readVirtualMemoryString(bufferAddr,256);
+//				String write = Lib.bytesToString(this.pipeBuffer,0,256);
+//				for(int i = 0; i<256; i++){
+//					System.out.println(read.charAt(i) == write.charAt(i));
+//				}
 			}else{
 				int first_read = pageSize - readPoint;
-				if (!readHelper(bufferAddr, count)){ this.pipeLock.release(); return -1;}
+				if (!readHelper(bufferAddr, first_read)){ this.pipeLock.release(); return -1;}
 				else{
 					bufferAddr += first_read;
 					count -= first_read;
@@ -851,7 +857,7 @@ public class UserProcess {
 			//wake up parent if sleeping
 //			this.parent.thread.ready();
 		} /** if exits normally */
-
+		System.out.println("Debug again!!!!!!: "+this.pid);
 		UserKernel.processCountLock.acquire();
 		UserKernel.processCount--;
 		UserKernel.processCountLock.release();
@@ -859,11 +865,12 @@ public class UserProcess {
 		this.childStatusMap.put(this.pid, 0);
 		UserKernel.childStatusMapLock.release();
 		if (UserKernel.processCount == 0){
-			System.out.println("Now halt");
+			System.out.println("Now halt: "+ this.pid);
 			//In case of last process, terminate the current process
 			Kernel.kernel.terminate();
 		}else{
-			System.out.println("Exit a process ok");
+			System.out.println("Exit a process ok: "+ this.pid);
+
 			//Close Kthread by calling KThread.finish()
 			this.thread.finish();
 

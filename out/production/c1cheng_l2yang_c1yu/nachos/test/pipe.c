@@ -48,9 +48,9 @@ do_close (int fd) {
 }
 
 /*
- *  * Write "len" bytes of "buffer" into the file "fname".  "stride"
- *   * controls how many bytes are written in each system call.
- *    */
+ *  *  * Write "len" bytes of "buffer" into the file "fname".  "stride"
+ *   *   * controls how many bytes are written in each system call.
+ *    *    */
 void
 do_write (char *fname, char *buffer, int len, int stride)
 {
@@ -82,12 +82,12 @@ do_write (char *fname, char *buffer, int len, int stride)
 }
 
 /*
- *  * Validate that the bytes of the file "fname" are the same as the
- *   * bytes in "truth".  Only compare "len" number of bytes.  "buffer" is
- *    * the temporary buffer used to read the contents of the file.  It is
- *     * allocated by the caller and needs to be at least "len" number of
- *      * bytes in size.
- *       */
+ *  *  * Validate that the bytes of the file "fname" are the same as the
+ *   *   * bytes in "truth".  Only compare "len" number of bytes.  "buffer" is
+ *    *    * the temporary buffer used to read the contents of the file.  It is
+ *     *     * allocated by the caller and needs to be at least "len" number of
+ *      *      * bytes in size.
+ *       *       */
 void
 do_validate (char *fname, char *buffer, char *truth, int len)
 {
@@ -152,8 +152,8 @@ main ()
     do_validate (file, buffer, str, len);
 
     /* ok, now write lots of binary data.  if you want to manually
- *      * confirm what was written, running "od -i ../test/binary.out"
- *           * will print the file and interpret the data as integers. */
+ *  *      * confirm what was written, running "od -i ../test/binary.out"
+ *   *           * will print the file and interpret the data as integers. */
     file = "/pipe/pepe";
     len = sizeof (bigbuf1);  /* len in units of bytes, bigbufnum in ints */
     for (i = 0; i < bigbufnum; i++) {
@@ -169,7 +169,7 @@ main ()
     do_validate (file, (char *) bigbuf2, (char *) bigbuf1, len);
 
     /* test corner cases for each of the three parameters to the write
- *      * system call. */
+ *  *      * system call. */
 
     /* test fd */
     fd = -10, len = 10;  /* value of len should not matter... */
@@ -245,5 +245,6 @@ main ()
     }
     return 0;
 }
+
 
 
