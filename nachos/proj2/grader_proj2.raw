@@ -1,4 +1,4 @@
-------[ Wed May 22 11:14:10 2019 ]------
+------[ Sun May 26 22:38:09 2019 ]------
 --[ read-abc-1: Test reading short file w/ length less than file size ]--
 stty: 'standard input': Inappropriate ioctl for device
 stty: 'standard input': Inappropriate ioctl for device
@@ -191,40 +191,7 @@ stty: 'standard input': Inappropriate ioctl for device
 nachos 5.0j initializing... config interrupt timer processor console user-check grader
 PID is: 0
 
-
-Lacked permission: ("java.util.PropertyPermission" "*" "read,write")
-
-java.lang.SecurityException
-	at nachos.security.NachosSecurityManager.no(NachosSecurityManager.java:171)
-	at nachos.security.NachosSecurityManager.verifyPrivilege(NachosSecurityManager.java:322)
-	at nachos.security.NachosSecurityManager.checkPermission(NachosSecurityManager.java:290)
-	at java.base/java.lang.SecurityManager.checkPropertiesAccess(SecurityManager.java:1047)
-	at java.base/java.lang.System.getProperties(System.java:701)
-	at java.base/sun.security.action.GetPropertyAction$1.run(GetPropertyAction.java:153)
-	at java.base/sun.security.action.GetPropertyAction$1.run(GetPropertyAction.java:151)
-	at java.base/java.security.AccessController.doPrivileged(Native Method)
-	at java.base/sun.security.action.GetPropertyAction.privilegedGetProperties(GetPropertyAction.java:150)
-	at java.base/java.util.Locale.initDefault(Locale.java:955)
-	at java.base/java.util.Locale.getDefault(Locale.java:915)
-	at java.base/java.util.Formatter.<init>(Formatter.java:1976)
-	at java.base/java.lang.String.format(String.java:2734)
-	at nachos.userprog.UserProcess.handleWrite(UserProcess.java:748)
-	at nachos.userprog.UserProcess.handleSyscall(UserProcess.java:1080)
-	at nachos.userprog.UserProcess.handleException(UserProcess.java:1108)
-	at nachos.userprog.UserKernel.exceptionHandler(UserKernel.java:96)
-	at nachos.userprog.UserKernel$1.run(UserKernel.java:42)
-	at nachos.machine.Processor$MipsException.handle(Processor.java:619)
-	at nachos.machine.Processor.run(Processor.java:101)
-	at nachos.userprog.UThread.runProgram(UThread.java:31)
-	at nachos.userprog.UThread.access$000(UThread.java:11)
-	at nachos.userprog.UThread$1.run(UThread.java:20)
-	at nachos.threads.KThread.runThread(KThread.java:167)
-	at nachos.threads.KThread.access$000(KThread.java:41)
-	at nachos.threads.KThread$1.run(KThread.java:156)
-	at nachos.machine.TCB.threadroot(TCB.java:246)
-	at nachos.machine.TCB.access$100(TCB.java:25)
-	at nachos.machine.TCB$1.run(TCB.java:99)
-	at java.base/java.lang.Thread.run(Thread.java:844)
+success
 stty: 'standard input': Inappropriate ioctl for device
 
 --[ write-err-fd-1: Test handling invalid file descriptor when calling write. Read shall return -1 ]--
@@ -242,40 +209,7 @@ stty: 'standard input': Inappropriate ioctl for device
 nachos 5.0j initializing... config interrupt timer processor console user-check grader
 PID is: 0
 
-
-Lacked permission: ("java.util.PropertyPermission" "*" "read,write")
-
-java.lang.SecurityException
-	at nachos.security.NachosSecurityManager.no(NachosSecurityManager.java:171)
-	at nachos.security.NachosSecurityManager.verifyPrivilege(NachosSecurityManager.java:322)
-	at nachos.security.NachosSecurityManager.checkPermission(NachosSecurityManager.java:290)
-	at java.base/java.lang.SecurityManager.checkPropertiesAccess(SecurityManager.java:1047)
-	at java.base/java.lang.System.getProperties(System.java:701)
-	at java.base/sun.security.action.GetPropertyAction$1.run(GetPropertyAction.java:153)
-	at java.base/sun.security.action.GetPropertyAction$1.run(GetPropertyAction.java:151)
-	at java.base/java.security.AccessController.doPrivileged(Native Method)
-	at java.base/sun.security.action.GetPropertyAction.privilegedGetProperties(GetPropertyAction.java:150)
-	at java.base/java.util.Locale.initDefault(Locale.java:955)
-	at java.base/java.util.Locale.getDefault(Locale.java:915)
-	at java.base/java.util.Formatter.<init>(Formatter.java:1976)
-	at java.base/java.lang.String.format(String.java:2734)
-	at nachos.userprog.UserProcess.handleWrite(UserProcess.java:748)
-	at nachos.userprog.UserProcess.handleSyscall(UserProcess.java:1080)
-	at nachos.userprog.UserProcess.handleException(UserProcess.java:1108)
-	at nachos.userprog.UserKernel.exceptionHandler(UserKernel.java:96)
-	at nachos.userprog.UserKernel$1.run(UserKernel.java:42)
-	at nachos.machine.Processor$MipsException.handle(Processor.java:619)
-	at nachos.machine.Processor.run(Processor.java:101)
-	at nachos.userprog.UThread.runProgram(UThread.java:31)
-	at nachos.userprog.UThread.access$000(UThread.java:11)
-	at nachos.userprog.UThread$1.run(UThread.java:20)
-	at nachos.threads.KThread.runThread(KThread.java:167)
-	at nachos.threads.KThread.access$000(KThread.java:41)
-	at nachos.threads.KThread$1.run(KThread.java:156)
-	at nachos.machine.TCB.threadroot(TCB.java:246)
-	at nachos.machine.TCB.access$100(TCB.java:25)
-	at nachos.machine.TCB$1.run(TCB.java:99)
-	at java.base/java.lang.Thread.run(Thread.java:844)
+success
 stty: 'standard input': Inappropriate ioctl for device
 
 --[ write-err-fd-3: Test handling out of range file descriptor when calling write. Read shall return -1 ]--
@@ -284,40 +218,7 @@ stty: 'standard input': Inappropriate ioctl for device
 nachos 5.0j initializing... config interrupt timer processor console user-check grader
 PID is: 0
 
-
-Lacked permission: ("java.util.PropertyPermission" "*" "read,write")
-
-java.lang.SecurityException
-	at nachos.security.NachosSecurityManager.no(NachosSecurityManager.java:171)
-	at nachos.security.NachosSecurityManager.verifyPrivilege(NachosSecurityManager.java:322)
-	at nachos.security.NachosSecurityManager.checkPermission(NachosSecurityManager.java:290)
-	at java.base/java.lang.SecurityManager.checkPropertiesAccess(SecurityManager.java:1047)
-	at java.base/java.lang.System.getProperties(System.java:701)
-	at java.base/sun.security.action.GetPropertyAction$1.run(GetPropertyAction.java:153)
-	at java.base/sun.security.action.GetPropertyAction$1.run(GetPropertyAction.java:151)
-	at java.base/java.security.AccessController.doPrivileged(Native Method)
-	at java.base/sun.security.action.GetPropertyAction.privilegedGetProperties(GetPropertyAction.java:150)
-	at java.base/java.util.Locale.initDefault(Locale.java:955)
-	at java.base/java.util.Locale.getDefault(Locale.java:915)
-	at java.base/java.util.Formatter.<init>(Formatter.java:1976)
-	at java.base/java.lang.String.format(String.java:2734)
-	at nachos.userprog.UserProcess.handleWrite(UserProcess.java:748)
-	at nachos.userprog.UserProcess.handleSyscall(UserProcess.java:1080)
-	at nachos.userprog.UserProcess.handleException(UserProcess.java:1108)
-	at nachos.userprog.UserKernel.exceptionHandler(UserKernel.java:96)
-	at nachos.userprog.UserKernel$1.run(UserKernel.java:42)
-	at nachos.machine.Processor$MipsException.handle(Processor.java:619)
-	at nachos.machine.Processor.run(Processor.java:101)
-	at nachos.userprog.UThread.runProgram(UThread.java:31)
-	at nachos.userprog.UThread.access$000(UThread.java:11)
-	at nachos.userprog.UThread$1.run(UThread.java:20)
-	at nachos.threads.KThread.runThread(KThread.java:167)
-	at nachos.threads.KThread.access$000(KThread.java:41)
-	at nachos.threads.KThread$1.run(KThread.java:156)
-	at nachos.machine.TCB.threadroot(TCB.java:246)
-	at nachos.machine.TCB.access$100(TCB.java:25)
-	at nachos.machine.TCB$1.run(TCB.java:99)
-	at java.base/java.lang.Thread.run(Thread.java:844)
+success
 stty: 'standard input': Inappropriate ioctl for device
 
 --[ write-long: Test writing large amount to file ]--
@@ -506,41 +407,24 @@ validating binary.out...
 ...passed
 closing 2...
 writing to an invalid fd (-10)...
+...passed (r = -1)
+writing to an invalid fd (256)...
+...passed (r = -1)
+writing to an unopened fd (8)...
+...passed (r = -1)
+creating bad.out...
+...passed (fd = 2)
+writing count = 0 bytes...
+...passed
+writing with an invalid buffer (should not crash, only return an error)...
+...passed (r = -1)
+writing with an invalid count (should not crash, only return an error)...
+...passed (r = -1)
+writing with a buffer that extends beyond the end of the
+address space.  write should return an error.
+...passed (r = -1)
 
-
-Lacked permission: ("java.util.PropertyPermission" "*" "read,write")
-
-java.lang.SecurityException
-	at nachos.security.NachosSecurityManager.no(NachosSecurityManager.java:171)
-	at nachos.security.NachosSecurityManager.verifyPrivilege(NachosSecurityManager.java:322)
-	at nachos.security.NachosSecurityManager.checkPermission(NachosSecurityManager.java:290)
-	at java.base/java.lang.SecurityManager.checkPropertiesAccess(SecurityManager.java:1047)
-	at java.base/java.lang.System.getProperties(System.java:701)
-	at java.base/sun.security.action.GetPropertyAction$1.run(GetPropertyAction.java:153)
-	at java.base/sun.security.action.GetPropertyAction$1.run(GetPropertyAction.java:151)
-	at java.base/java.security.AccessController.doPrivileged(Native Method)
-	at java.base/sun.security.action.GetPropertyAction.privilegedGetProperties(GetPropertyAction.java:150)
-	at java.base/java.util.Locale.initDefault(Locale.java:955)
-	at java.base/java.util.Locale.getDefault(Locale.java:915)
-	at java.base/java.util.Formatter.<init>(Formatter.java:1976)
-	at java.base/java.lang.String.format(String.java:2734)
-	at nachos.userprog.UserProcess.handleWrite(UserProcess.java:748)
-	at nachos.userprog.UserProcess.handleSyscall(UserProcess.java:1080)
-	at nachos.userprog.UserProcess.handleException(UserProcess.java:1108)
-	at nachos.userprog.UserKernel.exceptionHandler(UserKernel.java:96)
-	at nachos.userprog.UserKernel$1.run(UserKernel.java:42)
-	at nachos.machine.Processor$MipsException.handle(Processor.java:619)
-	at nachos.machine.Processor.run(Processor.java:101)
-	at nachos.userprog.UThread.runProgram(UThread.java:31)
-	at nachos.userprog.UThread.access$000(UThread.java:11)
-	at nachos.userprog.UThread$1.run(UThread.java:20)
-	at nachos.threads.KThread.runThread(KThread.java:167)
-	at nachos.threads.KThread.access$000(KThread.java:41)
-	at nachos.threads.KThread$1.run(KThread.java:156)
-	at nachos.machine.TCB.threadroot(TCB.java:246)
-	at nachos.machine.TCB.access$100(TCB.java:25)
-	at nachos.machine.TCB$1.run(TCB.java:99)
-	at java.base/java.lang.Thread.run(Thread.java:844)
+success
 stty: 'standard input': Inappropriate ioctl for device
 
 --[ open1: Test open single file and get valid fd ]--
