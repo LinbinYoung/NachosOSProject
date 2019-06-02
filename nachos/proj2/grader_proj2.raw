@@ -1,4 +1,4 @@
-------[ Sun May 26 22:38:09 2019 ]------
+------[ Sat Jun  1 01:21:49 2019 ]------
 --[ read-abc-1: Test reading short file w/ length less than file size ]--
 stty: 'standard input': Inappropriate ioctl for device
 stty: 'standard input': Inappropriate ioctl for device
