@@ -54,12 +54,9 @@ public class Lock {
 	 */
 	public void release() {
 		Lib.assertTrue(isHeldByCurrentThread());
-
 		boolean intStatus = Machine.interrupt().disable();
-
 		if ((lockHolder = waitQueue.nextThread()) != null)
 			lockHolder.ready();
-
 		Machine.interrupt().restore(intStatus);
 	}
 

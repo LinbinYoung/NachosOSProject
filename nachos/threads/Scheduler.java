@@ -11,7 +11,7 @@ public abstract class Scheduler {
 	/**
 	 * Allocate a new scheduler.
 	 */
-	public Scheduler() {
+	public Scheduler(){
 	}
 
 	/**
@@ -57,6 +57,7 @@ public abstract class Scheduler {
 	 * @param thread the thread to get the priority of.
 	 * @return the thread's priority.
 	 */
+	
 	public int getPriority(KThread thread) {
 		Lib.assertTrue(Machine.interrupt().disabled());
 		return 0;

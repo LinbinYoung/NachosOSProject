@@ -1,220 +1,215 @@
 package nachos.threads;
 
+import nachos.machine.*;
 import java.util.*;
 
-import nachos.machine.*;
-
 /**
- * A <i>SquadMatch</i> groups together player threads of the three different
- * abilities to play matches with each other. Implement the class
- * <i>SquadMatch</i> using <i>Lock</i> and <i>Condition</i> to synchronize
- * player threads into such groups.
+ * A <i>SquadMatch</i> groups together player threads of the 
+ * three different abilities to play matches with each other.
+ * Implement the class <i>SquadMatch</i> using <i>Lock</i> and
+ * <i>Condition</i> to synchronize player threads into such groups.
  */
+
 public class SquadMatch {
+    
+    /**
+     * Allocate a new SquadMatch for matching players of different
+     * abilities into a squad to play a match.
+     */
+	
+    public SquadMatch () {
+    	this.ConditionLock = new Lock();
+    	this.cv_wa = new Condition(this.ConditionLock);
+    	this.cv_wi = new Condition(this.ConditionLock);
+    	this.cv_th = new Condition(this.ConditionLock);
+    	this.warrier = 0;
+    	this.wizard = 0;
+    	this.thief = 0;
+    }
 
-//	private LinkedList<Condition> list;
-	private Condition warCond;
-	private Condition wizCond;
-	private Condition thiCond;
-	private Lock lock;
-	private int warCount;
-	private int wizCount;
-	private int thiCount;
+    /**
+     * Wait to form a squad with Wizard and Thief threads, only
+     * returning once all three kinds of player threads have called
+     * into this SquadMatch.  A squad always has three threads, and
+     * can only be formed by three different kinds of threads.  Many
+     * matches may be formed over time, but any one player thread can
+     * be assigned to only one match.
+     */
+    
+    public void warrior () {
+    	/*
+    	 * To Check whether Wizard and Thief in wait queue
+    	 * if not, sleep the current method
+    	 */
+    	boolean intStatus = Machine.interrupt().disable();
+    	this.ConditionLock.acquire();
+    	if (this.wizard != 0 && this.thief != 0) {
+    		// we need to wake up wizard and Thief then
+    		this.wizard --;
+    		this.thief --;
+    		cv_wi.wake();
+    		cv_th.wake();
+    	}else {
+    		this.warrier ++;
+    		cv_wa.sleep();
+    	}
+    	this.ConditionLock.release();
+    	Machine.interrupt().restore(intStatus);
+    }
 
-	/**
-	 * Allocate a new SquadMatch for matching players of different abilities into a
-	 * squad to play a match.
-	 */
-	public SquadMatch() {
-//		this.list = new LinkedList<>();
-		this.lock = new Lock();
-		this.warCond = new Condition(lock);
-		this.wizCond = new Condition(lock);
-		this.thiCond = new Condition(lock);
-		this.warCount = 0;
-		this.wizCount = 0;
-		this.thiCount = 0;
-	}
+    /**
+     * Wait to form a squad with Warrior and Thief threads, only
+     * returning once all three kinds of player threads have called
+     * into this SquadMatch.  A squad always has three threads, and
+     * can only be formed by three different kinds of threads.  Many
+     * matches may be formed over time, but any one player thread can
+     * be assigned to only one match.
+     */
+    
+    public void wizard () {
+    	/*
+    	 * To Check whether Warrier and Thief in wait queue
+    	 * if not, sleep the current method
+    	 */
+    	boolean intStatus = Machine.interrupt().disable();
+    	this.ConditionLock.acquire();
+    	if (this.warrier != 0 && this.thief != 0) {
+    		// we need to wake up wizard and Thief then
+    		this.thief --;
+    		this.warrier --;
+    		cv_wa.wake();
+    		cv_th.wake();
+    	}else {
+    		this.wizard ++;
+    		cv_wi.sleep();
+    	}
+    	this.ConditionLock.release();
+    	Machine.interrupt().restore(intStatus);
+    }
 
-	/**
-	 * Wait to form a squad with wizard and thief threads, only returning once all
-	 * three kinds of player threads have called into this SquadMatch. A squad
-	 * always has three threads, and can only be formed by three different kinds of
-	 * threads. Many matches may be formed over time, but any one player thread can
-	 * be assigned to only one match.
-	 */
-	public void warrior() {
-		boolean intStatus = Machine.interrupt().disable();
-		if (!lock.isHeldByCurrentThread()) lock.acquire();
-		if (this.wizCount >= 1 && this.thiCount >= 1) {
-			this.wizCount--;
-			this.thiCount--;
-			wizCond.wake();
-			thiCond.wake();
-//			KThread.yield();
-		} else {
-			this.warCount++;
-			this.warCond.sleep();
-		}
-		lock.release();
-		Machine.interrupt().restore(intStatus);
-	}
+    /**
+     * Wait to form a squad with Warrior and Wizard threads, only
+     * returning once all three kinds of player threads have called
+     * into this SquadMatch.  A squad always has three threads, and
+     * can only be formed by three different kinds of threads.  Many
+     * matches may be formed over time, but any one player thread can
+     * be assigned to only one match.
+     */
+    
+    public void thief () {
+    	/*
+    	 * To Check whether Warrier and Wizard in wait queue
+    	 * if not, sleep the current method
+    	 */
+    	boolean intStatus = Machine.interrupt().disable();
+    	this.ConditionLock.acquire();
+    	if (this.warrier != 0 && this.wizard != 0) {
+    		// we need to wake up wizard and Thief then
+    		this.wizard --;
+    		this.warrier --;
+    		cv_wa.wake();
+    		cv_wi.wake();
+    	}else {
+    		this.thief ++;
+    		cv_th.sleep();
+    	}
+    	this.ConditionLock.release();
+    	Machine.interrupt().restore(intStatus);
+    }
+    
+    private static Condition cv_wa;
+    private static Condition cv_wi;
+    private static Condition cv_th;
+    private static Lock ConditionLock;
+    private static int warrier;
+    private static int wizard;
+    private static int thief;
+    
+    public static void squadTest1 () {
+    	final SquadMatch match = new SquadMatch();
+    	// Instantiate the threads
+    	KThread w1 = new KThread( new Runnable () {
+    		public void run() {
+    		    match.warrior();
+    		    System.out.println ("w1 matched");
+    		}
+    	    });
+    	w1.setName("w1");
 
-	/**
-	 * Wait to form a squad with warrior and thief threads, only returning once all
-	 * three kinds of player threads have called into this SquadMatch. A squad
-	 * always has three threads, and can only be formed by three different kinds of
-	 * threads. Many matches may be formed over time, but any one player thread can
-	 * be assigned to only one match.
-	 */
-	public void wizard() {
-		boolean intStatus = Machine.interrupt().disable();
-//		KThread kth = new KThread(wizard);
-		if (!lock.isHeldByCurrentThread()) lock.acquire();
-		if (this.warCount >= 1 && this.thiCount >= 1) {
-//			System.out.println("Debugging wiz 001");
-			this.warCount--;
-			this.thiCount--;
-			warCond.wake();
-			thiCond.wake();
-		} else {
-			this.wizCount++;
-			this.wizCond.sleep();
-		}
-		lock.release();
-		Machine.interrupt().restore(intStatus);
-	}
+    	KThread z1 = new KThread( new Runnable () {
+    		public void run() {
+    		    match.wizard();
+    		    System.out.println ("z1 matched");
+    		}
+    	    });
+    	z1.setName("z1");
 
-	/**
-	 * Wait to form a squad with warrior and wizard threads, only returning once all
-	 * three kinds of player threads have called into this SquadMatch. A squad
-	 * always has three threads, and can only be formed by three different kinds of
-	 * threads. Many matches may be formed over time, but any one player thread can
-	 * be assigned to only one match.
-	 */
-	public void thief() {
-		boolean intStatus = Machine.interrupt().disable();
-		if (!lock.isHeldByCurrentThread()) lock.acquire();
-		if (this.warCount >= 1 && this.wizCount >= 1) {
-			this.warCount--;
-			this.wizCount--;
-			warCond.wake();
-			wizCond.wake();
-//			KThread.yield();
+    	KThread t1 = new KThread( new Runnable () {
+    		public void run() {
+    		    match.thief();
+    		    System.out.println ("t1 matched");
+    		}
+    	    });
+    	t1.setName("t1");
+    	
+    	KThread t2 = new KThread( new Runnable () {
+    		public void run() {
+    		    match.thief();
+    		    System.out.println ("t2 matched");
+    		}
+    	    });
+    	t1.setName("t2");
+    	
+    	KThread z2 = new KThread( new Runnable () {
+    		public void run() {
+    		    match.wizard();
+    		    System.out.println ("z2 matched");
+    		}
+    	    });
+    	z1.setName("z2");
+    	
+    	KThread w2 = new KThread( new Runnable () {
+    		public void run() {
+    		    match.warrior();
+    		    System.out.println ("w2 matched");
+    		}
+    	    });
+    	w1.setName("w2");
+    	
+    	KThread w3 = new KThread( new Runnable () {
+    		public void run() {
+    		    match.warrior();
+    		    System.out.println ("w3 matched");
+    		}
+    	    });
+    	w3.setName("w3");
 
-		} else {
-			this.thiCount++;
-			this.thiCond.sleep();
-		}
-		lock.release();
-		Machine.interrupt().restore(intStatus);
-	}
+    	// Run the threads.
+    	w1.fork();
+    	z1.fork();
+    	t1.fork();
+    	t2.fork();
+    	z2.fork();
+    	w2.fork();
+    	w3.fork();
 
-	public static void squadTest1() {
-		final SquadMatch match = new SquadMatch();
-
-		// Instantiate the threads
-		KThread w1 = new KThread(new Runnable() {
-			public void run() {
-				match.warrior();
-				System.out.println("w1 matched");
-			}
-		});
-		w1.setName("w1");
-
-		KThread z1 = new KThread(new Runnable() {
-			public void run() {
-				match.wizard();
-				System.out.println("z1 matched");
-			}
-		});
-		z1.setName("z1");
-
-		KThread t1 = new KThread(new Runnable() {
-			public void run() {
-				match.thief();
-				System.out.println("t1 matched");
-			}
-		});
-		t1.setName("t1");
-
-		KThread t2 = new KThread(new Runnable() {
-			public void run() {
-				match.thief();
-				System.out.println("t2 matched");
-			}
-		});
-		t2.setName("t2");
-
-		KThread z2 = new KThread(new Runnable() {
-			public void run() {
-				match.wizard();
-				System.out.println("z2 matched");
-			}
-		});
-		z2.setName("z2");
-
-		KThread w2 = new KThread(new Runnable() {
-			public void run() {
-				match.warrior();
-				System.out.println("w2 matched");
-			}
-		});
-		w2.setName("w2");
-		
-		KThread z3 = new KThread(new Runnable() {
-			public void run() {
-				match.wizard();
-				System.out.println("z3 matched");
-			}
-		});
-		z3.setName("z3");
-
-		KThread w3 = new KThread(new Runnable() {
-			public void run() {
-				match.warrior();
-				System.out.println("w3 matched");
-			}
-		});
-		w3.setName("w3");
-		
-		KThread t3 = new KThread(new Runnable() {
-			public void run() {
-				match.thief();
-				System.out.println("t3 matched");
-			}
-		});
-		t3.setName("t3");
-
-		// Run the threads.
-		w1.fork();
-		z1.fork();
-		t1.fork();
-		t2.fork();
-		z2.fork();
-		w2.fork();
-		z3.fork();
-//		w3.fork();
-		t3.fork();
-
-		// if you have join implemented, use the following:
-		w1.join();
-//		System.out.println("Debugging");
-//		z1.join();
-//		t1.join();
-//		t2.join();
-//		w2.join();
-//		z2.join();
-//		z3.join();
-//		t3.join();
-		// if you do not have join implemented, use yield to allow
-		// time to pass...10 yields should be enough
-//	     for (int i = 0; i < 10; i++) {
-//	         KThread.currentThread().yield();
-//	     }
-	}
-
-	public static void selfTest() {
-		squadTest1();
-	}
+    	// if you have join implemented, use the following:
+    	w1.join();
+    	z1.join();
+    	t1.join();
+    	w2.join();
+    	t2.join();
+//    	w3.join();
+//    	z2.join();
+    	// if you do not have join implemented, use yield to allow
+    	// time to pass...10 yields should be enough
+//    	for (int i = 0; i < 10; i++) {
+//    	    KThread.currentThread().yield();
+//    	}
+        }
+        
+        public static void selfTest() {
+    	    squadTest1();
+        }
+        
 }

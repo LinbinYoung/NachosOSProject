@@ -1,16 +1,15 @@
 package nachos.userprog;
 
+import java.util.LinkedList;
+
 import nachos.machine.*;
 import nachos.threads.*;
 import nachos.userprog.*;
-import java.util.*;
 
 /**
  * A kernel that can support multiple user processes.
  */
 public class UserKernel extends ThreadedKernel {
-
-
 	/**
 	 * Allocate a new user kernel.
 	 */
@@ -22,21 +21,18 @@ public class UserKernel extends ThreadedKernel {
 	 * Initialize this kernel. Creates a synchronized console and sets the
 	 * processor's exception handler.
 	 */
+	
 	public void initialize(String[] args) {
 		super.initialize(args);
-
-		console = new SynchConsole(Machine.console());
-
-		physicalPageSema = new Semaphore(1);
-		physicalPageList = new LinkedList<>();
-		processCountLock = new Lock();
-		childStatusMapLock = new Lock();
-		processCount = 0;
-		nextPID = 0;
-		for(int i = 0; i<Machine.processor().getNumPhysPages(); i++){
-			physicalPageList.add(i);
+		lock_page = new Semaphore(1);
+		lock_id = new Semaphore(1);
+		Counter = 0;
+		Running_Counter = 0;
+		mPhyPage = new LinkedList<>();
+		for (int i = 0; i < Machine.processor().getNumPhysPages(); i ++) {
+			mPhyPage.add(i);
 		}
-
+		console = new SynchConsole(Machine.console());
 		Machine.processor().setExceptionHandler(new Runnable() {
 			public void run() {
 				exceptionHandler();
@@ -48,19 +44,15 @@ public class UserKernel extends ThreadedKernel {
 	 * Test the console device.
 	 */
 	public void selfTest() {
-//		super.selfTest();
-
-//		System.out.println("Testing the console device. Typed characters");
-//		System.out.println("will be echoed until q is typed.");
-//
-//		char c;
-//
-//		do {
-//			c = (char) console.readByte(true);
-//			console.writeByte(c);
-//		} while (c != 'q');
-//
-//		System.out.println("");
+		super.selfTest();
+		System.out.println("Testing the console device. Typed characters");
+		System.out.println("will be echoed until q is typed.");
+		char c;
+		do {
+			c = (char) console.readByte(true);
+			console.writeByte(c);
+		} while (c != 'q');
+		System.out.println("");
 	}
 
 	/**
@@ -68,10 +60,10 @@ public class UserKernel extends ThreadedKernel {
 	 * 
 	 * @return the current process, or <tt>null</tt> if no process is current.
 	 */
+	
 	public static UserProcess currentProcess() {
 		if (!(KThread.currentThread() instanceof UThread))
 			return null;
-
 		return ((UThread) KThread.currentThread()).process;
 	}
 
@@ -90,7 +82,6 @@ public class UserKernel extends ThreadedKernel {
 	 */
 	public void exceptionHandler() {
 		Lib.assertTrue(KThread.currentThread() instanceof UThread);
-
 		UserProcess process = ((UThread) KThread.currentThread()).process;
 		int cause = Machine.processor().readRegister(Processor.regCause);
 		process.handleException(cause);
@@ -103,11 +94,10 @@ public class UserKernel extends ThreadedKernel {
 	 * 
 	 * @see nachos.machine.Machine#getShellProgramName
 	 */
+	
 	public void run() {
 		super.run();
-
 		UserProcess process = UserProcess.newUserProcess();
-
 		String shellProgram = Machine.getShellProgramName();
 		if (!process.execute(shellProgram, new String[] {})) {
 		    System.out.println ("Could not find executable '" +
@@ -126,20 +116,18 @@ public class UserKernel extends ThreadedKernel {
 	/**
 	 * Terminate this kernel. Never returns.
 	 */
+	
 	public void terminate() {
 		super.terminate();
 	}
 
 	/** Globally accessible reference to the synchronized console. */
-	public static SynchConsole console;
-
 	// dummy variables to make javac smarter
 	private static Coff dummy1 = null;
-
-	public static List<Integer> physicalPageList;
-	public static Semaphore physicalPageSema;
-	public static Lock processCountLock;
-	public static int processCount;
-	public static int nextPID;
-	public static Lock childStatusMapLock;
+	public static SynchConsole console;
+	public static LinkedList<Integer> mPhyPage = new LinkedList<>();
+	public static int Counter;
+	public static int Running_Counter;
+	public static Semaphore lock_id;
+	public static Semaphore lock_page;
 }

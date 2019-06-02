@@ -28,6 +28,7 @@ public class StubFileSystem implements FileSystem {
 	public OpenFile open(String name, boolean truncate) {
 		if (!checkName(name))
 			return null;
+
 		delay();
 
 		try {

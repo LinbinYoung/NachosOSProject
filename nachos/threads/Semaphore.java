@@ -21,6 +21,7 @@ import nachos.machine.*;
  * other thread might have called <tt>P()</tt> or <tt>V()</tt>, so the true
  * value might now be different.
  */
+
 public class Semaphore {
 	/**
 	 * Allocate a new semaphore.
@@ -34,9 +35,10 @@ public class Semaphore {
 	/**
 	 * Atomically wait for this semaphore to become non-zero and decrement it.
 	 */
+	
 	public void P() {
+		// P means wait
 		boolean intStatus = Machine.interrupt().disable();
-
 		if (value == 0) {
 			waitQueue.waitForAccess(KThread.currentThread());
 			KThread.sleep();
@@ -44,7 +46,6 @@ public class Semaphore {
 		else {
 			value--;
 		}
-
 		Machine.interrupt().restore(intStatus);
 	}
 
@@ -52,9 +53,10 @@ public class Semaphore {
 	 * Atomically increment this semaphore and wake up at most one other thread
 	 * sleeping on this semaphore.
 	 */
+	
 	public void V() {
+		// V means signal
 		boolean intStatus = Machine.interrupt().disable();
-
 		KThread thread = waitQueue.nextThread();
 		if (thread != null) {
 			thread.ready();
@@ -62,7 +64,6 @@ public class Semaphore {
 		else {
 			value++;
 		}
-
 		Machine.interrupt().restore(intStatus);
 	}
 
@@ -101,6 +102,5 @@ public class Semaphore {
 
 	private int value;
 
-	private ThreadQueue waitQueue = ThreadedKernel.scheduler
-			.newThreadQueue(false);
+	private ThreadQueue waitQueue = ThreadedKernel.scheduler.newThreadQueue(false);
 }

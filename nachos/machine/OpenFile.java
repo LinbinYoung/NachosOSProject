@@ -95,7 +95,7 @@ public class OpenFile {
 	/**
 	 * Set the value of the current file pointer.
 	 */
-	public void seek(int pos) {
+	public void seek(int pos){
 	}
 
 	/**
@@ -135,8 +135,6 @@ public class OpenFile {
 	public int write(byte[] buf, int offset, int length) {
 		return -1;
 	}
-
 	private FileSystem fileSystem;
-
 	private String name;
 }

@@ -31,6 +31,7 @@ public interface FileSystem {
 	 * @param name the name of the file to remove.
 	 * @return <tt>true</tt> if the file was successfully removed.
 	 */
+	
 	public boolean remove(String name);
 
 	/**
@@ -38,5 +39,6 @@ public interface FileSystem {
 	 * 
 	 * @return <tt>int</tt> representing the count of open files.
 	 */
+	
 	public int getOpenCount();
 }

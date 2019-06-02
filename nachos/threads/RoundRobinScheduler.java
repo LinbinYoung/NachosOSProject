@@ -49,10 +49,8 @@ public class RoundRobinScheduler extends Scheduler {
 		 */
 		public KThread nextThread() {
 			Lib.assertTrue(Machine.interrupt().disabled());
-
 			if (waitQueue.isEmpty())
 				return null;
-
 			return (KThread) waitQueue.removeFirst();
 		}
 
@@ -63,7 +61,6 @@ public class RoundRobinScheduler extends Scheduler {
 		 */
 		public void acquire(KThread thread) {
 			Lib.assertTrue(Machine.interrupt().disabled());
-
 			Lib.assertTrue(waitQueue.isEmpty());
 		}
 

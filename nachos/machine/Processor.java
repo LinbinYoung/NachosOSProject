@@ -19,6 +19,7 @@ import nachos.security.*;
  * An instance of a <tt>Processor</tt> also includes pages of physical memory
  * accessible to user programs, the size of which is fixed by the constructor.
  */
+
 public final class Processor {
 	/**
 	 * Allocate a new MIPS processor, with the specified amount of memory.
@@ -103,6 +104,7 @@ public final class Processor {
 
 			privilege.interrupt.tick(false);
 		}
+		
 	}
 
 	/**

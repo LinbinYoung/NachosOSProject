@@ -1,5 +1,7 @@
 package nachos.vm;
 
+import java.util.LinkedList;
+
 import nachos.machine.*;
 import nachos.threads.*;
 import nachos.userprog.*;
@@ -12,8 +14,9 @@ public class VMKernel extends UserKernel {
 	/**
 	 * Allocate a new VM kernel.
 	 */
-	public VMKernel() {
+	public VMKernel(){
 		super();
+		//initialized FramesInfo
 	}
 
 	/**
@@ -21,6 +24,18 @@ public class VMKernel extends UserKernel {
 	 */
 	public void initialize(String[] args) {
 		super.initialize(args);
+		this.freeSwapPage = new LinkedList<>();
+		this.lock = new Lock();
+		this.victim = 0;
+		this.PinCounter = 0;
+		this.FreeCounter = 0;
+		this.swap_file = new OpenFile();
+		this.CV = new Condition(lock);
+		for (int i = 0; i < Machine.processor().getNumPhysPages(); i ++) {
+			
+			FrameAttachedInfo[i] = new FramesInfo(null, null, false);
+			System.out.println(i);
+		}
 	}
 
 	/**
@@ -46,6 +61,24 @@ public class VMKernel extends UserKernel {
 
 	// dummy variables to make javac smarter
 	private static VMProcess dummy1 = null;
-
 	private static final char dbgVM = 'v';
+	public static LinkedList<Integer> freeSwapPage;
+	public static int victim;
+	public static int PinCounter;
+	public static int FreeCounter;
+	public static Lock lock;
+	public static Condition CV;
+	public static OpenFile swap_file;
+	public static FramesInfo[] FrameAttachedInfo = new FramesInfo[Machine.processor().getNumPhysPages()];
+}
+
+class FramesInfo{
+	VMProcess vmp;
+	TranslationEntry TLE;
+	boolean pin;
+	FramesInfo(VMProcess vmp, TranslationEntry TLE, boolean pin){
+		this.vmp = vmp;
+		this.TLE = TLE;
+		this.pin = pin;
+	}
 }

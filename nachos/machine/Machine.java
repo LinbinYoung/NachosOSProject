@@ -39,7 +39,7 @@ public final class Machine {
 			testDirectory = new File(testDirectoryName);
 		}
 		else {
-			// use ../test
+		// use ../test
 			testDirectory = new File(baseDirectory.getParentFile(), "test");
 		}
 
@@ -108,9 +108,7 @@ public final class Machine {
 	 */
 	public static String[] getCommandLineArguments() {
 		String[] result = new String[args.length];
-
 		System.arraycopy(args, 0, result, 0, args.length);
-
 		return result;
 	}
 

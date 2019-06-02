@@ -1,14 +1,11 @@
 package nachos.userprog;
 
 import nachos.machine.*;
-
 import nachos.threads.*;
 import nachos.userprog.*;
 import nachos.vm.*;
-
 import java.io.EOFException;
-import java.util.*;
-import java.lang.*;
+import java.util.HashMap;
 
 /**
  * Encapsulates the state of a user process that is not contained in its user
@@ -22,182 +19,23 @@ import java.lang.*;
  * @see nachos.vm.VMProcess
  * @see nachos.network.NetProcess
  */
+
 public class UserProcess {
-	/** Pipe buffer */
-	public class Pipe extends OpenFile {
-
-		public Pipe(String name) {
-			super(null, "SynchConsole");
-			this.pipeBuffer = new byte[pageSize];
-			this.writePoint = 0;
-			this.readPoint = 0;
-			this.freeSize = pageSize;
-			this.pipeLock = new Lock();
-			this.pipeCond = new Condition(this.pipeLock);
-			this.name = name;
-			UserProcess.pipeMap.put(name, this);
-		}
-
-		public String getName(){
-			return this.name;
-		}
-
-		public byte[] pipeBuffer;
-		public int writePoint;
-		public int readPoint;
-		public int freeSize;
-		private Lock pipeLock;
-		private Condition pipeCond;
-		private String name;
-
-		public boolean writeHelper(int bufferAddr, int count){
-			int cur_write = readVirtualMemory(bufferAddr, this.pipeBuffer, writePoint, count);
-			if (cur_write != count) return false;
-			freeSize -= cur_write;
-			writePoint = (writePoint+cur_write)%pageSize;
-			return true;
-		}
-
-		public int writePipe(int bufferAddr, int count) {
-			this.pipeLock.acquire();
-			/** @param vaddr the first byte of virtual memory to read.
-	 			@param data the array where the data will be stored.
-			 	@param offset the first byte to write in the array.
-	 			@param length the number of bytes to transfer from virtual memory to the */
-			//there is enough in the pipe buffer
-			int result = count;
-			while(count > 0){
-				if(freeSize >= count) {
-					if (pageSize - writePoint > count) {
-						if (!writeHelper(bufferAddr, count)){this.pipeLock.release(); return -1; }
-						else count = 0;
-					}else{
-						int first_write = pageSize - writePoint;
-						if (!writeHelper(bufferAddr, count)){this.pipeLock.release(); return -1;}
-						else{
-							bufferAddr += first_write;
-							count -= first_write;
-						}
-						if (!writeHelper(bufferAddr, count)){this.pipeLock.release(); return -1;}
-						else count = 0;
-					}
-				}else{
-					if(readPoint <= writePoint){
-						int first_write = pageSize - writePoint;
-						if (!writeHelper(bufferAddr, count)){this.pipeLock.release(); return -1;}
-						else{
-							bufferAddr += first_write;
-							count -= first_write;
-						}
-						if (!writeHelper(bufferAddr, readPoint)){this.pipeLock.release(); return -1;}
-						else count -= readPoint;
-					}else{
-						if (!writeHelper(bufferAddr, readPoint)){this.pipeLock.release(); return -1;}
-						else count -= readPoint;
-					}
-					pipeLock.acquire();
-					pipeCond.sleep();
-					pipeLock.release();
-				}
-			}
-			this.pipeLock.release();
-//			System.out.println("pipeBuffer write: \n"+ Lib.bytesToString(this.pipeBuffer,0,256));
-			return result;
-		}
-
-		public boolean readHelper(int bufferAddr, int count){
-
-			int cur_read= writeVirtualMemory(bufferAddr, this.pipeBuffer, readPoint, count);
-			if (cur_read != count) return false;
-			freeSize += cur_read;
-			pipeCond.wake();
-			readPoint = (readPoint+cur_read)%pageSize;
-			return true;
-		}
-		public int readPipe(int bufferAddr, int count){
-				/**@param vaddr the first byte of virtual memory to write.
-				 * @param data the array containing the data to transfer.
-				 * @param offset the first byte to transfer from the array.
-				 * @param length the number of bytes to transfer from the array to virtual
-				 * memory. */
-			this.pipeLock.acquire();
-			//there is enough in the pipe buffer
-			int result = count;
-			count = Math.min(pageSize - freeSize, count);
-			if (readPoint + count < pageSize) {
-				if (!readHelper(bufferAddr, count)){ this.pipeLock.release(); return -1;}
-//				System.out.println("pipeBuffer read: \n"+readVirtualMemoryString(bufferAddr,256));
-//				String read = readVirtualMemoryString(bufferAddr,256);
-//				String write = Lib.bytesToString(this.pipeBuffer,0,256);
-//				for(int i = 0; i<256; i++){
-//					System.out.println(read.charAt(i) == write.charAt(i));
-//				}
-			}else{
-				int first_read = pageSize - readPoint;
-				if (!readHelper(bufferAddr, first_read)){ this.pipeLock.release(); return -1;}
-				else{
-					bufferAddr += first_read;
-					count -= first_read;
-				}
-				if (!readHelper(bufferAddr, count)){ this.pipeLock.release(); return -1;}
-			}
-			this.pipeLock.release();
-			return result;
-		}
-	}
-		/**
-		readVirtualMemory(int vaddr, byte[] data, int offset, int length) {
-			Lib.assertTrue(offset >= 0 && length >= 0
-					&& offset + length <= data.length);
-
-			byte[] memory = Machine.processor().getMemory();
-
-			if (vaddr < 0 || vaddr >= memory.length) return 0;
-
-			int vpn = vaddr/pageSize;
-			int off = vaddr%pageSize;
-			int first = offset;
-			// TODO: should check whether it's valid bit???
-			int paddr = 0;
-			int read = 0;
-			length = Math.min(length, numPages*pageSize - vaddr);
-			while(length > 0){
-				if (!pageTable[vpn].valid) break;
-				paddr = pageTable[vpn].ppn * pageSize + off;
-				read = Math.min(length, pageSize - off);
-				System.arraycopy(memory, paddr, data, offset, read);
-				off = 0;
-				offset += read;
-				length -= read;
-				vpn++;
-			}
-			return offset - first;
-		 */
-
 	/**
 	 * Allocate a new process.
 	 */
 	public UserProcess() {
-
-		UserKernel.processCountLock.acquire();
-		this.pid = UserKernel.nextPID;
-		UserKernel.nextPID++;
-		UserKernel.processCount++;
-		UserKernel.processCountLock.release();
-		System.out.println("PID is: "+this.pid);
-
-//		this.joinLock = new Lock();
-//		this.joinCondition = new Condition(joinLock);
-
-//		todo: page table entries
-//		int numPhysPages = Machine.processor().getNumPhysPages();
-//		pageTable = new TranslationEntry[numPhysPages];
-//		for (int i = 0; i < numPhysPages; i++)
-//			pageTable[i] = new TranslationEntry(-1, -1, false, true, false, false);
-
-		fileDescTable = new OpenFile[s_fileTableSize];
-		fileDescTable[0] = UserKernel.console.openForReading();
-		fileDescTable[1] = UserKernel.console.openForWriting();
+		this.file_arr = new OpenFile[16];
+		this.file_arr[0] = UserKernel.console.openForReading();
+		this.file_arr[1] = UserKernel.console.openForWriting();
+		int numPhysPages = Machine.processor().getNumPhysPages();
+		UserKernel.lock_id.P();
+		Process_ID = UserKernel.Counter++;
+		UserKernel.lock_id.V();
+		child = new HashMap<>();
+		childStatus = new HashMap<>();
+		lock_status_map = new Lock();
+		this.exit_flag = 0;
 	}
 
 	/**
@@ -207,14 +45,15 @@ public class UserProcess {
 	 * 
 	 * @return a new process of the correct class.
 	 */
-	public static UserProcess newUserProcess() {
-		String name = Machine.getProcessClassName ();
 
+	public static UserProcess newUserProcess() {
+	    String name = Machine.getProcessClassName ();
+	    
 		// If Lib.constructObject is used, it quickly runs out
 		// of file descriptors and throws an exception in
 		// createClassLoader.  Hack around it by hard-coding
 		// creating new processes of the appropriate type.
-
+	    
 		if (name.equals ("nachos.userprog.UserProcess")) {
 		    return new UserProcess ();
 		} else if (name.equals ("nachos.vm.VMProcess")) {
@@ -232,13 +71,15 @@ public class UserProcess {
 	 * @param args the arguments to pass to the executable.
 	 * @return <tt>true</tt> if the program was successfully executed.
 	 */
+	
 	public boolean execute(String name, String[] args) {
 		if (!load(name, args))
 			return false;
-
+		UserKernel.lock_id.P();
+		Process_ID = UserKernel.Running_Counter++;
+		UserKernel.lock_id.V();
 		thread = new UThread(this);
 		thread.setName(name).fork();
-
 		return true;
 	}
 
@@ -246,6 +87,7 @@ public class UserProcess {
 	 * Save the state of this process in preparation for a context switch.
 	 * Called by <tt>UThread.saveState()</tt>.
 	 */
+	
 	public void saveState() {
 	}
 
@@ -270,29 +112,27 @@ public class UserProcess {
 	 * @return the string read, or <tt>null</tt> if no null terminator was
 	 * found.
 	 */
+	
 	public String readVirtualMemoryString(int vaddr, int maxLength) {
 		Lib.assertTrue(maxLength >= 0);
-
 		byte[] bytes = new byte[maxLength + 1];
-
 		int bytesRead = readVirtualMemory(vaddr, bytes);
-
 		for (int length = 0; length < bytesRead; length++) {
 			if (bytes[length] == 0)
 				return new String(bytes, 0, length);
 		}
-
 		return null;
 	}
 
 	/**
 	 * Transfer data from this process's virtual memory to all of the specified
 	 * array. Same as <tt>readVirtualMemory(vaddr, data, 0, data.length)</tt>.
-	 *
+	 * 
 	 * @param vaddr the first byte of virtual memory to read.
 	 * @param data the array where the data will be stored.
 	 * @return the number of bytes successfully transferred.
 	 */
+	
 	public int readVirtualMemory(int vaddr, byte[] data) {
 		return readVirtualMemory(vaddr, data, 0, data.length);
 	}
@@ -311,46 +151,83 @@ public class UserProcess {
 	 * array.
 	 * @return the number of bytes successfully transferred.
 	 */
+	
 	public int readVirtualMemory(int vaddr, byte[] data, int offset, int length) {
-		Lib.assertTrue(offset >= 0 && length >= 0
-				&& offset + length <= data.length);
-
+		Lib.assertTrue(offset >= 0 && length >= 0 && offset + length <= data.length);
 		byte[] memory = Machine.processor().getMemory();
-
-		if (vaddr < 0 || vaddr >= memory.length) return 0;
-//		int vpn = vaddr/pageSize;
-//		int off = vaddr%pageSize;
-		int vpn = Processor.pageFromAddress(vaddr);
-		int off = Processor.offsetFromAddress(vaddr);
-		int first = offset;
-		// TODO: should check whether it's valid bit???
-		int paddr = 0;
-		int read = 0;
-		length = Math.min(length, numPages*pageSize - vaddr);
-		while(length > 0){
-			if (!pageTable[vpn].valid) break;
-			paddr = pageTable[vpn].ppn * pageSize + off;
-			read = Math.min(length, pageSize - off);
-			System.arraycopy(memory, paddr, data, offset, read);
-			off = 0;
-			offset += read;
-			length -= read;
-			vpn++;
+		if (vaddr < 0 || vaddr >= memory.length) {
+			return 0;
 		}
-		return offset - first;
-//		Lib.assertTrue(offset >= 0 && length >= 0
-//				&& offset + length <= data.length);
-//
-//		byte[] memory = Machine.processor().getMemory();
-//
-//		// for now, just assume that virtual addresses equal physical addresses
-//		if (vaddr < 0 || vaddr >= memory.length)
-//			return 0;
-//
-//		int amount = Math.min(length, memory.length - vaddr);
-//		System.arraycopy(memory, vaddr, data, offset, amount);
-//
-//		return amount;
+		int success_read = 0; //Get vpn from vaddr
+		int vpn = Processor.pageFromAddress(vaddr);
+		if (vpn < 0 || vpn >= this.pageTable.length) {
+			return 0;
+		}
+		int phy_offset = Processor.offsetFromAddress(vaddr); //Use vpn to get the entry of ppn
+		TranslationEntry entry = this.pageTable[vpn];
+		int phy_addr = pageSize*entry.ppn + phy_offset;
+		if (phy_addr >= memory.length || phy_addr < 0) {
+			System.out.println("Invalid Physical Address");
+			return 0;
+		}
+		if (!entry.valid) {
+			return 0;
+		}
+//		if (entry.valid) {
+			// we can not ignore this page
+			// read data page by page
+			// length denotes how many bytes that yield to write
+			// The pages are not continuous
+			entry.used = true;
+			int start = 0;
+			while (length > 0) {
+				if (phy_offset + length > pageSize) {
+					int can_write_length = pageSize - phy_offset;
+					try {
+						System.arraycopy(memory, phy_addr, data, start, can_write_length);
+					}catch(Exception e) {
+						//case arraycopy fails
+						return success_read;
+					}
+					start = start + can_write_length;
+					length = length - can_write_length;
+					success_read += can_write_length;
+					//update to the next physical address
+					if (++vpn > this.pageTable.length) {
+						return success_read;
+					}
+					entry.used = false;
+					entry = this.pageTable[vpn];
+					if (!entry.valid) {
+						return success_read;
+					}
+					phy_offset = 0;
+					phy_addr = entry.ppn*pageSize + phy_offset;
+					if (phy_addr >= memory.length || phy_addr < 0) {
+						System.out.println("Invalid Physical Address");
+						return success_read;
+					}
+					if (!entry.valid) {
+						return success_read;
+					}
+					entry.used = true;
+				}else {
+					int can_write_length = length;
+					try {
+						System.arraycopy(memory, phy_addr, data, start, can_write_length);
+					}catch(Exception e) {
+						return success_read;
+					}
+					success_read += can_write_length;
+					start = start + can_write_length;
+					length = length - can_write_length;
+					entry.used = false;
+				}
+			}//end while
+//		}
+//		System.out.println("READ");
+//		System.out.println(success_read);
+		return success_read;
 	}
 
 	/**
@@ -361,6 +238,7 @@ public class UserProcess {
 	 * @param data the array containing the data to transfer.
 	 * @return the number of bytes successfully transferred.
 	 */
+	
 	public int writeVirtualMemory(int vaddr, byte[] data) {
 		return writeVirtualMemory(vaddr, data, 0, data.length);
 	}
@@ -379,47 +257,73 @@ public class UserProcess {
 	 * memory.
 	 * @return the number of bytes successfully transferred.
 	 */
+	
 	public int writeVirtualMemory(int vaddr, byte[] data, int offset, int length) {
-		Lib.assertTrue(offset >= 0 && length >= 0
-				&& offset + length <= data.length);
-
+		Lib.assertTrue(offset >= 0 && length >= 0 && offset + length <= data.length);
 		byte[] memory = Machine.processor().getMemory();
 		if (vaddr < 0 || vaddr >= memory.length)
 			return 0;
+		int success_write = 0; //Get vpn from vaddr
 		int vpn = Processor.pageFromAddress(vaddr);
-		int off = Processor.offsetFromAddress(vaddr);
-//		int vpn = vaddr/pageSize;
-//		int off = vaddr%pageSize;
-		int first = offset;
-		int paddr = 0;
-		int write = 0;
-		int amount = Math.min(length, numPages * pageSize - vaddr);
-		while(amount > 0){
-			if(!pageTable[vpn].valid) break;
-			//if vaddr in read only section, return -1
-			if(pageTable[vpn].readOnly) return -1;
-			paddr = pageTable[vpn].ppn * pageSize + off;
-			write = Math.min(amount, pageSize-off);
-			System.arraycopy(data, offset, memory, paddr, amount);
-			off = 0;
-			vpn++;
-			offset += write;
-			amount -= write;
+		if (vpn < 0 || vpn >= this.pageTable.length) {
+			return 0;
 		}
-		return offset-first;
-//		Lib.assertTrue(offset >= 0 && length >= 0
-//				&& offset + length <= data.length);
-//
-//		byte[] memory = Machine.processor().getMemory();
-//
-//		// for now, just assume that virtual addresses equal physical addresses
-//		if (vaddr < 0 || vaddr >= memory.length)
-//			return 0;
-//
-//		int amount = Math.min(length, memory.length - vaddr);
-//		System.arraycopy(data, offset, memory, vaddr, amount);
-//
-//		return amount;
+		int phy_offset = Processor.offsetFromAddress(vaddr); //Use vpn to get the entry of ppn
+		TranslationEntry entry = this.pageTable[vpn];
+		int phy_addr = pageSize*entry.ppn + phy_offset;
+		if (phy_addr >= memory.length || phy_addr < 0) {
+			System.out.println("Invalid Physical Address");
+			return 0;
+		}
+		if (entry.readOnly || !entry.valid) {
+			// we cannot write data to memory
+			return 0;
+		}
+		entry.used = true;
+		int start = 0;
+		while (length > 0) {
+			// write page by page
+			if (phy_offset + length > pageSize) {
+				int can_to_memory = pageSize - phy_offset;
+				try {
+					System.arraycopy(data, start, memory, phy_addr, can_to_memory);
+				}catch(Exception e) {
+					return success_write;
+				}
+				success_write += can_to_memory;
+				start = start + can_to_memory;
+				length = length - can_to_memory;
+				if (++vpn > this.pageTable.length) {
+					return success_write;
+				}
+				entry.used = false;
+				//calculate the new phy_addr
+				entry = this.pageTable[vpn];
+				phy_offset = 0;
+				phy_addr = pageSize*entry.ppn + phy_offset;
+				if (phy_addr >= memory.length || phy_addr < 0) {
+					System.out.println("Invalid Physical Address");
+					return success_write;
+				}
+				if (entry.readOnly  || !entry.valid) {
+					// we cannot write data to memory
+					return success_write;
+				}
+				entry.used = true;
+			}else {
+				int can_to_memory = length;
+				try {
+					System.arraycopy(data, start, memory, phy_addr, can_to_memory);
+				}catch(Exception e) {
+					return success_write;
+				}
+				success_write += can_to_memory;
+				start = start + can_to_memory;
+				length = length - can_to_memory;
+				entry.used = false;
+			}
+		}
+		return success_write;
 	}
 
 	/**
@@ -432,15 +336,14 @@ public class UserProcess {
 	 * @param args the arguments to pass to the executable.
 	 * @return <tt>true</tt> if the executable was successfully loaded.
 	 */
+	
 	private boolean load(String name, String[] args) {
 		Lib.debug(dbgProcess, "UserProcess.load(\"" + name + "\")");
-
 		OpenFile executable = ThreadedKernel.fileSystem.open(name, false);
 		if (executable == null) {
 			Lib.debug(dbgProcess, "\topen failed");
 			return false;
 		}
-
 		try {
 			coff = new Coff(executable);
 		}
@@ -475,20 +378,15 @@ public class UserProcess {
 			Lib.debug(dbgProcess, "\targuments too long");
 			return false;
 		}
-
 		// program counter initially points at the program entry point
 		initialPC = coff.getEntryPoint();
-
 		// next comes the stack; stack pointer initially points to top of it
 		numPages += stackPages;
 		initialSP = numPages * pageSize;
-
 		// and finally reserve 1 page for arguments
 		numPages++;
-
 		if (!loadSections())
 			return false;
-
 		// store arguments in last page
 		int entryOffset = (numPages - 1) * pageSize;
 		int stringOffset = entryOffset + args.length * 4;
@@ -498,9 +396,6 @@ public class UserProcess {
 
 		for (int i = 0; i < argv.length; i++) {
 			byte[] stringOffsetBytes = Lib.bytesFromInt(stringOffset);
-//			System.out.println(entryOffset);
-//			System.out.println(stringOffsetBytes);
-//			System.out.println(writeVirtualMemory(entryOffset, stringOffsetBytes));
 			Lib.assertTrue(writeVirtualMemory(entryOffset, stringOffsetBytes) == 4);
 			entryOffset += 4;
 			Lib.assertTrue(writeVirtualMemory(stringOffset, argv[i]) == argv[i].length);
@@ -508,7 +403,6 @@ public class UserProcess {
 			Lib.assertTrue(writeVirtualMemory(stringOffset, new byte[] { 0 }) == 1);
 			stringOffset += 1;
 		}
-
 		return true;
 	}
 
@@ -519,41 +413,96 @@ public class UserProcess {
 	 * 
 	 * @return <tt>true</tt> if the sections were successfully loaded.
 	 */
+	
 	protected boolean loadSections() {
-
-		UserKernel.physicalPageSema.P();
-		this.pageTable = new TranslationEntry[numPages];
-		if (numPages > UserKernel.physicalPageList.size()) {
-			//If a user program requests pages from the kernel, and cannot acquire them, we should abort,
-			// close the coff file, and return false from load section.
+		if (numPages > Machine.processor().getNumPhysPages()){
 			coff.close();
 			Lib.debug(dbgProcess, "\tinsufficient physical memory");
-			UserKernel.physicalPageSema.V();
 			return false;
-		}else {
-			for(int i = 0; i<numPages; i++) {
-				int ppn = UserKernel.physicalPageList.remove(0);
-				this.pageTable[i] = new TranslationEntry(i, ppn, true, false, false, false);
-			}
 		}
-		UserKernel.physicalPageSema.V();
-
+		this.pageTable = new TranslationEntry[this.numPages];
+		int ppn;
+		UserKernel.lock_page.P();
+		for (int i = 0; i < this.numPages; i ++) {
+			try {
+				ppn = UserKernel.mPhyPage.removeFirst();
+			}catch(IndexOutOfBoundsException e) {
+				this.unloadSections();
+				UserKernel.lock_page.V();
+				return false;
+			}
+			this.pageTable[i] = new TranslationEntry(i, ppn, true, false, false, false);
+		}
+		UserKernel.lock_page.V();
+		
 		// load sections
 		for (int s = 0; s < coff.getNumSections(); s++) {
 			CoffSection section = coff.getSection(s);
-
-			Lib.debug(dbgProcess, "\tinitializing " + section.getName()
-					+ " section (" + section.getLength() + " pages)");
-
+			int start = section.getFirstVPN();
+			Lib.debug(dbgProcess, "\tinitializing " + section.getName() + " section (" + section.getLength() + " pages)");
 			for (int i = 0; i < section.getLength(); i++) {
-				int vpn = section.getFirstVPN() + i;
-				//determine which sections are ready only using coff.isReadOnly()
-				this.pageTable[vpn].readOnly = section.isReadOnly();
-				section.loadPage(i, this.pageTable[vpn].ppn);
-//				// for now, just assume virtual addresses=physical addresses
-//				section.loadPage(i, vpn);
+				int vpn = start + i;
+				// For now, just assume virtual addresses=physical addresses
+				// Here we need to map the vpn to ppn
+				// Get the ppn from the Pagetable
+				TranslationEntry entry = pageTable[vpn];
+				UserKernel.lock_page.P();
+				Integer free_page = UserKernel.mPhyPage.removeFirst();
+				UserKernel.lock_page.V();
+				if (free_page == null) {
+					// No available page
+					UserKernel.lock_page.P();
+					unloadSections();
+					UserKernel.lock_page.V();
+					return false;
+				}else{
+					/**
+					 * Allocate a new translation entry with the specified initial state.
+					 * @param vpn the virtual page number.
+					 * @param ppn the physical page number.
+					 * @param valid the valid bit.
+					 * @param readOnly the read-only bit.
+					 * @param used the used bit.
+					 * @param dirty the dirty bit.
+					 */
+					entry.ppn = free_page;
+					entry.readOnly = section.isReadOnly();
+					entry.valid = true;
+				}
+				//load and run
+				section.loadPage(i, entry.ppn);
 			}
 		}
+			//0-num_of_coff sections
+			//8 stack pages
+			//1 page reserved for arguments
+			for (int i = numPages - 9; i < numPages; i ++) {
+				TranslationEntry entry = pageTable[i];
+				//acquire lock, no race condition
+				UserKernel.lock_page.P();
+				Integer free_page = UserKernel.mPhyPage.removeFirst();
+				//release lock
+				UserKernel.lock_page.V();
+				if (free_page == null) {
+					// No available page
+					UserKernel.lock_page.P();
+					unloadSections();
+					UserKernel.lock_page.V();
+					return false;
+				}else {
+					/**
+					 * Allocate a new translation entry with the specified initial state.
+					 * @param vpn the virtual page number.
+					 * @param ppn the physical page number.
+					 * @param valid the valid bit.
+					 * @param readOnly the read-only bit.
+					 * @param used the used bit.
+					 * @param dirty the dirty bit.
+					 */
+					entry.ppn = free_page;
+					entry.valid = true;
+				}
+			}
 		return true;
 	}
 
@@ -561,14 +510,16 @@ public class UserProcess {
 	 * Release any resources allocated by <tt>loadSections()</tt>.
 	 */
 	protected void unloadSections() {
-		UserKernel.physicalPageSema.P();
-		for(int i = 0; i<this.pageTable.length; i++) {
-			if(this.pageTable[i] != null && this.pageTable[i].valid) {
-				this.pageTable[i].valid = false;
-				UserKernel.physicalPageList.add(pageTable[i].ppn);
+		// total number of entry for the process: numPages
+		for(int i = 0; i < pageTable.length; i ++) {
+			TranslationEntry entry = pageTable[i];
+			if (entry.valid) {
+				//valid false: we can ignore the page
+				// UserKernel.lock_page.P();
+				UserKernel.mPhyPage.add(entry.ppn);
+				// UserKernel.lock_page.V();
 			}
-		}
-		UserKernel.physicalPageSema.V();
+		}//end for
 	}
 
 	/**
@@ -578,438 +529,287 @@ public class UserProcess {
 	 * stack, set the A0 and A1 registers to argc and argv, respectively, and
 	 * initialize all other registers to 0.
 	 */
+	
 	public void initRegisters() {
 		Processor processor = Machine.processor();
-
 		// by default, everything's 0
 		for (int i = 0; i < processor.numUserRegisters; i++)
 			processor.writeRegister(i, 0);
-
 		// initialize PC and SP according
 		processor.writeRegister(Processor.regPC, initialPC);
 		processor.writeRegister(Processor.regSP, initialSP);
-
 		// initialize the first two argument registers to argc and argv
 		processor.writeRegister(Processor.regA0, argc);
 		processor.writeRegister(Processor.regA1, argv);
 	}
 
-	/** FILE MANAGEMENT SYSCALLS: creat, open, read, write, close, unlink
-	 *
-	 * A file descriptor is a small, non-negative integer that refers to a file on
-	 * disk or to a stream (such as console input, console output, and network
-	 * connections). A file descriptor can be passed to read() and write() to
-	 * read/write the corresponding file/stream. A file descriptor can also be
-	 * passed to close() to release the file descriptor and any associated
-	 * resources.
-	 */
-
 	/**
-	 * Attempt to open the named disk file, creating it if it does not exist,
-	 * and return a file descriptor that can be used to access the file.
-	 *
-	 * Note that creat() can only be used to create files on disk; creat() will
-	 * never return a file descriptor referring to a stream.
-	 *
-	 * Returns the new file descriptor, or -1 if an error occurred.
+	 * Handle the halt() system call.
 	 */
-
-	/**
-	 * #mcip
-	 * Handle the create() system call
-	 */
-	private int handleCreate(int vaddr){
-		if(vaddr < 0) return -1;
-		String file_name = readVirtualMemoryString(vaddr, 256);
-		if(file_name == null) return -1;
-
-		OpenFile o_file = null;
-		Pipe p_file = null;
-		if(file_name.toLowerCase().startsWith("/pipe/")) {
-//			TODO: re-enable this
-			if (UserProcess.pipeMap.containsKey(file_name)) return -1;
-			p_file = new Pipe(file_name);
-		}else {
-			o_file = ThreadedKernel.fileSystem.open(new String(file_name), true);
-			if (o_file == null) return -1;
-			//		System.out.println("c1");
-		}
-		int empty_ind = -1;
-		for (int i = 2; i < s_fileTableSize; i++) {
-			if (this.fileDescTable[i] == null) {
-				empty_ind = i;
-				break;
-			}
-		}
-		if (empty_ind == -1) return -1;
-
-		this.fileDescTable[empty_ind] = o_file != null? o_file : p_file;
-		return empty_ind;
-	}
-
-	/**
-	 * Attempt to open the named file and return a file descriptor.
-	 *
-	 * Note that open() can only be used to open files on disk; open() will never
-	 * return a file descriptor referring to a stream.
-	 *
-	 * Returns the new file descriptor, or -1 if an error occurred.
-	 */
-	private int handleOpen(int vaddr){
-		if(vaddr < 0) return -1;
-
-		String file_name = readVirtualMemoryString(vaddr, 256);
-		if(file_name == null) return -1;
-
-		int empty_ind = -1;
-		for (int i = 2; i < fileDescTable.length; i++){
-			//opening the same file multiple times returns different file descriptors for each open
-			if(this.fileDescTable[i] == null){
-				empty_ind = i;
-				break;
-			}
-		}
-		if (empty_ind == -1) return -1;
-
-		OpenFile o_file = null;
-		Pipe p_file = null;
-		if(file_name.toLowerCase().startsWith("/pipe/")) {
-			p_file = UserProcess.pipeMap.getOrDefault(file_name, null);
-			if(p_file == null) return -1;
-		}else {
-			o_file = ThreadedKernel.fileSystem.open(new String(file_name), false);
-			if (o_file == null) return -1;
-			//		System.out.println("c1");
-		}
-		this.fileDescTable[empty_ind] = o_file!=null?o_file:p_file;
-		return empty_ind;
-	}
-
-	/**
-	 * Attempt to read up to count bytes into buffer from the file or stream
-	 * referred to by fileDescriptor.
-	 *
-	 * On success, the number of bytes read is returned. If the file descriptor
-	 * refers to a file on disk, the file position is advanced by this number.
-	 *
-	 * It is not necessarily an error if this number is smaller than the number of
-	 * bytes requested. If the file descriptor refers to a file on disk, this
-	 * indicates that the end of the file has been reached. If the file descriptor
-	 * refers to a stream, this indicates that the fewer bytes are actually
-	 * available right now than were requested, but more bytes may become available
-	 * in the future. Note that read() never waits for a stream to have more data;
-	 * it always returns as much as possible immediately.
-	 *
-	 * On error, -1 is returned, and the new file position is undefined. This can
-	 * happen if fileDescriptor is invalid, if part of the buffer is read-only or
-	 * invalid, or if a network stream has been terminated by the remote host and
-	 * no more data is available.
-	 */
-	private int handleRead(int fileDescriptor, int bufferAddr, int count){
-		if(fileDescriptor < 0 || fileDescriptor == 1 || fileDescriptor>=s_fileTableSize || count < 0) return -1;
-		OpenFile file = null;
-		Pipe p_file = null;
-		if (!(this.fileDescTable[fileDescriptor] instanceof Pipe)) file = this.fileDescTable[fileDescriptor];
-		else p_file = (Pipe)this.fileDescTable[fileDescriptor];
-		if(file == null && p_file == null) return -1;
-
-		byte[] buffer = new byte[pageSize];
-		int bytes_read = 0, cur_ker_read = 0, cur_pro_write = 0;
-
-		while(count > 0){
-			if(file == null) return p_file.readPipe(bufferAddr, count);
-
-			cur_ker_read = file.read(buffer, 0, Math.min(count, pageSize));
-			if(cur_ker_read <= 0) return -1;
-
-			cur_pro_write = writeVirtualMemory(bufferAddr, buffer, 0, cur_ker_read);
-			if(cur_ker_read != cur_pro_write) return -1;
-			bufferAddr += cur_ker_read;
-			bytes_read += cur_ker_read;
-			count -= cur_ker_read;
-		}
-		return bytes_read;
-	}
-
-	/**
-	 * Attempt to write up to count bytes from buffer to the file or stream
-	 * referred to by fileDescriptor. write() can return before the bytes are
-	 * actually flushed to the file or stream. A write to a stream can block,
-	 * however, if kernel queues are temporarily full.
-	 *
-	 * On success, the number of bytes written is returned (zero indicates nothing
-	 * was written), and the file position is advanced by this number. It IS an
-	 * error if this number is smaller than the number of bytes requested. For
-	 * disk files, this indicates that the disk is full. For streams, this
-	 * indicates the stream was terminated by the remote host before all the data
-	 * was transferred.
-	 *
-	 * On error, -1 is returned, and the new file position is undefined. This can
-	 * happen if fileDescriptor is invalid, if part of the buffer is invalid, or
-	 * if a network stream has already been terminated by the remote host.
-	 */
-	private int handleWrite(int fileDescriptor, int bufferAddr, int count){
-		if(fileDescriptor <= 0 || fileDescriptor>=s_fileTableSize || count < 0) {
-			Lib.debug(dbgProcess, String.format("fD %d not in range or count < 0", fileDescriptor));
-			return -1;
-		}
-		Pipe p_file = null;
-		OpenFile file = null;
-		if(!(this.fileDescTable[fileDescriptor] instanceof  Pipe)) file = this.fileDescTable[fileDescriptor];
-		else p_file = (Pipe)this.fileDescTable[fileDescriptor];
-		if(file == null && p_file == null) {
-			Lib.debug(dbgProcess, "file DNE");
-			return -1;
-		}
-
-		byte[] buffer = new byte[pageSize];
-		int bytes_write = 0, cur_pro_read = 0, cur_ker_write = 0;
-
-		// your method should return -1 to indicate an error, and on an error the new file position is undefined
-		// so it should be okay to write all of the data to the file.
-		while(count > 0){
-			cur_pro_read = readVirtualMemory(bufferAddr, buffer, 0, Math.min(count, pageSize));
-			if(cur_pro_read <= 0) {
-				Lib.debug(dbgProcess, "doesnt read any");
-				return -1;
-			}
-
-			if (file!=null) cur_ker_write = file.write(buffer, 0, cur_pro_read);
-			else cur_ker_write = p_file.writePipe(bufferAddr, count);
-
-//			cur_ker_write = file.write(bufferAddr, buffer, 0, cur_pro_read);
-			if(cur_ker_write != cur_pro_read) {
-				Lib.debug(dbgProcess, "write not equal to read");
-				return -1;
-			}
-
-			bytes_write += cur_pro_read;
-			bufferAddr += cur_pro_read;
-			count -= cur_pro_read;
-		}
-		return bytes_write;
-	}
-
-	/**
-	 * Close a file descriptor, so that it no longer refers to any file or
-	 * stream and may be reused. The resources associated with the file
-	 * descriptor are released.
-	 *
-	 * Returns 0 on success, or -1 if an error occurred.
-	 */
-	private int handleClose(int fileDescriptor){
-		if(fileDescriptor < 0 || fileDescriptor>=s_fileTableSize) return -1;
-		if(this.fileDescTable[fileDescriptor] == null) return -1;
-
-		if(!(this.fileDescTable[fileDescriptor] instanceof Pipe)){
-			OpenFile file = this.fileDescTable[fileDescriptor];
-			file.close();
-		}else{
-			Pipe file = (Pipe) this.fileDescTable[fileDescriptor];
-			file.close();
-		}
-		this.fileDescTable[fileDescriptor] = null;
-		return 0;
-	}
-
-	/**
-	 * Delete a file from the file system.
-	 *
-	 * If another process has the file open, the underlying file system
-	 * implementation in StubFileSystem will cleanly handle this situation
-	 * (this process will ask the file system to remove the file, but the
-	 * file will not actually be deleted by the file system until all
-	 * other processes are done with the file).
-	 *
-	 * Returns 0 on success, or -1 if an error occurred.
-	 */
-	private int handleUnlink(int vaddr){
-		if(vaddr < 0) return -1;
-		String file_name = readVirtualMemoryString(vaddr, 256);
-		int to_close = -1;
-		for(int i = 0; i<this.fileDescTable.length; i++){
-			if(this.fileDescTable[i] != null && this.fileDescTable[i].getName().equals(file_name)){
-				//since opening the same file multiple times returns different file descriptors for each open
-				handleClose(i);
-			}
-		}
-		//TODO: UserProcess.pipeMap.remove(file.getName());
-//		if(to_close != -1) handleClose(to_close);
-		if(ThreadedKernel.fileSystem.remove(file_name)) return 0;
-		return -1;
-	}
-
-	/* PROCESS MANAGEMENT SYSCALLS: exit(), exec(), join() */
-	/**
-	 * Terminate the current process immediately. Any open file descriptors
-	 * belonging to the process are closed. Any children of the process no longer
-	 * have a parent process.
-	 *
-	 * status is returned to the parent process as this process's exit status and
-	 * can be collected using the join syscall. A process exiting normally should
-	 * (but is not required to) set status to 0.
-	 *
-	 * exit() never returns.
-	 */
-	private int handleExit(int status) {  //void exit(int status);
-	        // Do not remove this call to the autoGrader...
-		Machine.autoGrader().finishingCurrentProcess(status);
-		// ...and leave it as the top of handleExit so that we
-		// can grade your implementation.
-
-		//close all files in file table
-		for(int i = 0;i<16; i++) this.handleClose(i);
-		//delete all memory by unloadSections()
-		this.unloadSections();
-		Lib.debug(dbgProcess, "UserProcess.handleExit (" + status + ")");
-		//close the coff
-		coff.close();
-		//if it has a parent process, save the status for parent, join() will need it
-		if(this.parent != null) {
-			this.parent.status = status;
-//			this.joinCondition.wakeAll();
-			//wake up parent if sleeping
-//			this.parent.thread.ready();
-		} /** if exits normally */
-		System.out.println("Debug again!!!!!!: "+this.pid);
-		UserKernel.processCountLock.acquire();
-		UserKernel.processCount--;
-		UserKernel.processCountLock.release();
-		UserKernel.childStatusMapLock.acquire();
-		this.childStatusMap.put(this.pid, 0);
-		UserKernel.childStatusMapLock.release();
-		if (UserKernel.processCount == 0){
-			System.out.println("Now halt: "+ this.pid);
-			//In case of last process, terminate the current process
-			Kernel.kernel.terminate();
-		}else{
-			System.out.println("Exit a process ok: "+ this.pid);
-
-			//Close Kthread by calling KThread.finish()
-			this.thread.finish();
-
-		}
-		return 0;
-//		this.unloadSections();
-//		coff.close();
-//		Lib.debug(dbgProcess, "UserProcess.handleExit (" + status + ")");
-//		// for now, unconditionally terminate with just one process
-//		Kernel.kernel.terminate();
-//		return 0;
-	}
-
-	/**
-	 * Execute the program stored in the specified file, with the specified
-	 * arguments, in a new child process. The child process has a new unique
-	 * process ID, and starts with stdin opened as file descriptor 0, and stdout
-	 * opened as file descriptor 1.
-	 *
-	 * file is a null-terminated string that specifies the name of the file
-	 * containing the executable. Note that this string must include the ".coff"
-	 * extension.
-	 *
-	 * argc specifies the number of arguments to pass to the child process. This
-	 * number must be non-negative.
-	 *
-	 * argv is an array of pointers to null-terminated strings that represent the
-	 * arguments to pass to the child process. argv[0] points to the first
-	 * argument, and argv[argc-1] points to the last argument.
-	 *
-	 * exec() returns the child process's process ID, which can be passed to
-	 * join(). On error, returns -1.
-	 */
-	/** exec(char *name, int argc, char **argv); */
-	private int handleExec(int coffName, int argc, int argv){
-		//TODO: need to check argv >= 0?
-		if(coffName < 0 || argc<0 || argv < 0) return -1;
-		String file_name = readVirtualMemoryString(coffName, 256);
-		//file name need to include .coff
-		System.out.println(("File name: "+file_name +", argc: "+argc));
-		if(!file_name.toLowerCase().endsWith(".coff")) return -1;
-
-		//TODO: Chao hui Yu
-		byte[] bytes = new byte[argc*4];
-		int byteRead = this.readVirtualMemory(argv, bytes);
-		if(byteRead != argc*4) return -1; // check if bytes read is ok
-		String[] args = new String[argc];
-		for (int i = 0; i<argc; i++){
-			int vaddr_arg = Lib.bytesToInt(bytes, i*4);
-			args[i] = this.readVirtualMemoryString(vaddr_arg, 256);
-			if(args[i] == null) return -1;  // check if a String is read
-			System.out.println("Argument: "+args[i]);
-		}
-
-		UserProcess child = new UserProcess();
-		this.childMap.put(child.pid, child);
-		child.parent = this;
-		if (!child.execute(file_name, args)) {
-//			System.out.println("parameter");
-			return -1;
-		}
-		System.out.println("Child PID: "+child.pid);
-		return child.pid;
-	}
-
-	/**
-	 * Suspend execution of the current process until the child process specified
-	 * by the processID argument has exited. If the child has already exited by the
-	 * time of the call, returns immediately. When the current process resumes, it
-	 * disowns the child process, so that join() cannot be used on that process
-	 * again.
-	 *
-	 * processID is the process ID of the child process, returned by exec().
-	 *
-	 * status points to an integer where the exit status of the child process will
-	 * be stored. This is the value the child passed to exit(). If the child exited
-	 * because of an unhandled exception, the value stored is not defined.
-	 *
-	 * If the child exited normally, returns 1. If the child exited as a result of
-	 * an unhandled exception, returns 0. If processID does not refer to a child
-	 * process of the current process, returns -1.
-	 */
-	private int handleJoin(int processID, int status){ //int* status
-		UserProcess child = this.childMap.get(processID);
-		if(child == null) return -1; // PID doenst refer to a child process of the current process
-		this.childMap.remove(processID);
-		//Sleep on child
-		child.thread.join();
-
-//		joinLock.acquire();
-//		joinCondition.sleep();
-//		joinLock.release();
-
-		// child exited as result of unhandled exception, return 0
-		UserKernel.childStatusMapLock.acquire();
-		int child_exit = this.childStatusMap.getOrDefault(processID, 10);
-		UserKernel.childStatusMapLock.release();
-		if (child_exit == -1) return 0;
-
-		//in a number of cases, we are treating NULL=0x0 as a special case.
-		if (status != 0) {
-			//Get and set child status, which is a virtual address
-			//Larger byte on the left
-			byte[] buffer = {(byte) (child.status >> 24), (byte) (child.status >> 16),
-					(byte) (child.status >> 8), (byte) (child.status)};
-			if (writeVirtualMemory(status, buffer) < 4) return -1; // TODO: what about this?
-		}
-		return 1; // child exited normal return 1
-	}
-
-	/**
-	 Halt the Nachos machine by calling Machine.halt(). Only the root process
-	 * (the first process, executed by UserKernel.run()) should be allowed to
-	 * execute this syscall. Any other process should ignore the syscall and return
-	 * immediately.
-	 */
+	
 	private int handleHalt() {
-		if (this.pid == 0) {
-			Machine.halt();
+		// Check if it is root process
+		System.out.println("halt");
+		if (this.Process_ID != 0) {
+			return -1;
 		}
-		//another process invoked halt, should return -1
+		Machine.halt();
 		Lib.assertNotReached("Machine.halt() did not halt machine!");
+		return 0;
+	}
+
+	/**
+	 * Handle the exit() system call.
+	 */
+	private int handleExit(int status) {
+		Machine.autoGrader().finishingCurrentProcess(status);
+		Lib.debug(dbgProcess, "UserProcess.handleExit (" + status + ")");
+        // Do not remove this call to the autoGrader...
+		//close all file descriptors
+		for (int i = 0; i < 16; i ++) {
+			handleClose(i);
+			this.file_arr[i] = null;
+		}
+		//Delete all memory
+		UserKernel.lock_page.P();
+		unloadSections();
+		UserKernel.lock_page.V();
+		coff.close();
+		UserKernel.lock_id.P();
+		UserKernel.Running_Counter--;
+		UserKernel.lock_id.V();
+		if (this.parent != null) {
+			Integer value = this.exit_flag == 1? -1 : status;
+			this.parent.lock_status_map.acquire();
+			this.status = value;
+			this.parent.child.put(new Integer(this.Process_ID), this);
+			this.parent.childStatus.put(new Integer(this.Process_ID), value);
+			this.parent.lock_status_map.release();
+			KThread.finish();
+		}
+		UserKernel.lock_id.P();
+		if(UserKernel.Running_Counter == 0) {
+			UserKernel.lock_id.V();
+			Kernel.kernel.terminate();
+		}
+		UserKernel.lock_id.V();
+		return status;
+	}
+
+	private int handleOpen(int vaddr) {
+		// Get the filename
+		if (vaddr < 0) return -1;
+		String get_filename = this.readVirtualMemoryString(vaddr, 256);
+		if (get_filename == null) {
+			//Try to opern a file that does not exist
+			return -1;
+		}
+		for (int i = 0; i < this.file_arr.length; i ++) {
+			if (this.file_arr[i] == null) {
+				OpenFile instan = ThreadedKernel.fileSystem.open(get_filename, false);
+				if (instan == null) return -1;
+				this.file_arr[i] = instan;
+				return i;
+			}
+		}
 		return -1;
 	}
 
+	private int handleCreate(int vaddr) {
+		// Get the filename
+		System.out.println("create");
+		String get_filename = this.readVirtualMemoryString(vaddr, 256);
+		if (get_filename == null) {
+			return -1;
+		}
+		if (vaddr < 0) {
+			return -1;
+		}
+		OpenFile instan = ThreadedKernel.fileSystem.open(get_filename, true);
+		for (int i = 2; i < this.file_arr.length; i ++) {
+			if (this.file_arr[i] != null) {
+				//check if the file exists or not
+				if (this.file_arr[i].getName().equals(get_filename)) {
+					//The file already exists
+					return -1;
+				}
+			}else {
+				file_arr[i] = instan;
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	private int handleRead(int fileDescriptor, int vaddr, int length) {
+		// System.out.println("read");
+		if (fileDescriptor < 0 || fileDescriptor > 15){
+			return -1;
+		}
+		if (length < 0 || vaddr < 0) {
+			return -1;
+		}
+		OpenFile instan = this.file_arr[fileDescriptor];
+		if (instan == null) {
+			return -1;
+		}
+		//res denotes the amount of successful read
+		//start denotes the position we should fetch data from file
+		byte[] buff;
+		int res = 0;
+		while(length > 0) {
+			int can_read = Math.min(length, pageSize);
+			buff = new byte[can_read];
+			if (instan.read(buff, 0, can_read) != can_read) {
+				return -1;
+			}
+			int write_back = this.writeVirtualMemory(vaddr, buff, 0, can_read);
+			if (write_back != can_read) {
+				return -1;
+			}
+			res = res + can_read;
+			length = length - can_read;
+			vaddr = vaddr + can_read;	
+		}
+		return res;
+	}
+	
+	private int handleWrite(int fileDescriptor, int vaddr, int length) {
+		// System.out.println("write");
+		if (fileDescriptor < 0 || fileDescriptor > 15){
+			return -1;
+		}
+		if (length < 0 || vaddr < 0) {
+			return -1;
+		}
+		OpenFile instan = this.file_arr[fileDescriptor];
+		if (instan == null) {
+			return -1;
+		}
+		int res = 0;
+		byte[] temp_store;
+		while (length > 0) {
+			int can_write = Math.min(pageSize, length);
+			temp_store = new byte[can_write];
+			if(this.readVirtualMemory(vaddr, temp_store, 0, can_write) != can_write) {
+				return -1;
+			}
+			int write_back = instan.write(temp_store, 0, can_write);
+			if (write_back == -1 || write_back != can_write) {
+				return -1;
+			}
+			res = res + can_write;
+			length = length - can_write;
+			vaddr = vaddr + can_write;
+		}
+		return res;
+	}
+
+	private int handleClose(int fileDescriptor) {
+		//System.out.println("close");
+		if (fileDescriptor < 0 || fileDescriptor > 15) {
+			return -1;
+		}
+		OpenFile instan = this.file_arr[fileDescriptor];
+		if (instan == null) {
+			return -1;
+		}
+		instan.close();
+		this.file_arr[fileDescriptor] = null;
+		return 0;
+	}
+	
+	private int handleUnlink(int vaddr) {
+		String get_filename = this.readVirtualMemoryString(vaddr, 256);
+		if (get_filename == null) {
+			return -1;
+		}
+		if (vaddr < 0) {
+			return -1;
+		}
+		for (int i = 0; i < this.file_arr.length; i ++) {
+			if (this.file_arr[i] != null) {
+				if (this.file_arr[i].getName().equals(get_filename)) {
+					this.handleClose(i);
+				}
+			}
+		}
+		if(ThreadedKernel.fileSystem.remove(get_filename)) {
+			return 0;
+		}else {
+			return -1;
+		}
+	}
+	
+	private int handleExec(int file_addr, int argc, int vaddr) {
+		/*
+		 * filename: object .coff file
+		 */
+		// System.out.println("exec");
+		if (file_addr < 0 || argc < 0 || vaddr < 0) {
+			//check corner case
+			return -1;
+		}
+		String get_filename = this.readVirtualMemoryString(file_addr, 256);
+		if (get_filename == null || !get_filename.split("\\.")[1].equals("coff")) {
+			System.out.println("Fail to get the target file or do not have .coff extension");
+			return -1;
+		}
+		String[] argv = new String[argc];
+		byte[] pointer = new byte[4];
+		for (int i = 0; i < argc; i ++) {
+			if (this.readVirtualMemory(vaddr+i*4, pointer) != 4) {
+				return -1;
+			}
+			String arg_fetch = this.readVirtualMemoryString(Lib.bytesToInt(pointer, 0), 256);
+			argv[i] = arg_fetch;
+		}
+		UserProcess c_process = UserProcess.newUserProcess();
+		//execute program in c_process
+		if(!c_process.execute(get_filename, argv)) {
+			return -1;
+		}
+		//store the parent info to child
+		c_process.parent = this;
+		//store the child info to parent
+		this.lock_status_map.acquire();
+		this.child.put(new Integer(c_process.Process_ID), c_process);
+		this.childStatus.put(new Integer(c_process.Process_ID), null);
+		this.lock_status_map.release();
+		return c_process.Process_ID;
+	}
+	
+	private int handleJoin(int PID, int vaddr) {
+		/*
+		 * Wait Until the child completes
+		 */
+		//suspend the current process associate with one thread
+		//first check if the child process is in the hash table
+		Integer pid = new Integer(PID);
+		if (!this.child.containsKey(pid)) {
+			return -1;
+		}
+		//fetch the child process
+		UserProcess c_p = this.child.get(pid);
+		c_p.thread.join();
+		//now store all status of child process to memory
+		//how to tell if the child process exit
+		if (c_p.exit_flag == 1) {
+			// exit with an unhandled exception 
+			return 0;
+		}
+		byte[] status_contents = Lib.bytesFromInt(c_p.status);
+		if (this.writeVirtualMemory(vaddr, status_contents) != 4) {
+			return -1;
+		}else {
+			this.lock_status_map.acquire();
+			this.child.remove(pid);
+			this.childStatus.remove(pid);
+			this.lock_status_map.release();
+			return 1;
+		}
+	}
+	
 	private static final int syscallHalt = 0, syscallExit = 1, syscallExec = 2,
 			syscallJoin = 3, syscallCreate = 4, syscallOpen = 5,
 			syscallRead = 6, syscallWrite = 7, syscallClose = 8,
@@ -1042,6 +842,7 @@ public class UserProcess {
 	 * <td><tt>int  join(int pid, int *status);</tt></td>
 	 * </tr>
 	 * <tr>
+	 * 
 	 * <td>4</td>
 	 * <td><tt>int  creat(char *name);</tt></td>
 	 * </tr>
@@ -1076,16 +877,17 @@ public class UserProcess {
 	 * @param a3 the fourth syscall argument.
 	 * @return the value to be returned to the user.
 	 */
+	
 	public int handleSyscall(int syscall, int a0, int a1, int a2, int a3) {
 		switch (syscall) {
 		case syscallHalt:
 			return handleHalt();
 		case syscallExit:
 			return handleExit(a0);
-		case syscallCreate:
-			return handleCreate(a0);
 		case syscallOpen:
 			return handleOpen(a0);
+		case syscallCreate:
+			return handleCreate(a0);
 		case syscallRead:
 			return handleRead(a0, a1, a2);
 		case syscallWrite:
@@ -1127,51 +929,12 @@ public class UserProcess {
 			break;
 
 		default:
-			System.out.println("mcip: handle exception");
-			if(this.parent != null) {
-				UserKernel.childStatusMapLock.acquire();
-				this.parent.childStatusMap.put(this.pid, -1);
-				UserKernel.childStatusMapLock.release();
-			}
-
-			for(int i = 0;i<16; i++) this.handleClose(i);
-			//delete all memory by unloadSections()
-			this.unloadSections();
-			//close the coff
-			coff.close();
-
-			UserKernel.processCountLock.acquire();
-			UserKernel.processCount--;
-			UserKernel.processCountLock.release();
-
-			if (UserKernel.processCount == 0){
-				System.out.println("mcip: Now halt");
-				//In case of last process, terminate the current process
-				Kernel.kernel.terminate();
-			}else{
-				System.out.println("mcip: Exit a process ok");
-				//Close Kthread by calling KThread.finish()
-				this.thread.finish();
-
-			}
-
-			Lib.debug(dbgProcess, "Unexpected exception: "
-					+ Processor.exceptionNames[cause]);
+			this.exit_flag = 1;
+			handleExit(233);
+			Lib.debug(dbgProcess, "Unexpected exception: " + Processor.exceptionNames[cause]);
 			Lib.assertNotReached("Unexpected exception");
 		}
 	}
-	/** Added by mcip */
-	public static int s_fileTableSize = 16;
-	protected OpenFile[] fileDescTable;
-	private UserProcess parent;
-	private Map<Integer, UserProcess> childMap = new HashMap<>();
-	public Map<Integer, Integer> childStatusMap = new HashMap<>(); //-1 due to exception, 0 if exitted
-	private int status;
-	private int pid;
-//	private Lock joinLock;
-//	private Condition joinCondition;
-//	private boolean exitWithException = false;
-	private static Map<String, Pipe> pipeMap = new HashMap<>();
 
 	/** The program being run by this process. */
 	protected Coff coff;
@@ -1186,7 +949,7 @@ public class UserProcess {
 	protected final int stackPages = 8;
 
 	/** The thread that executes the user-level program. */
-	protected UThread thread;
+    protected UThread thread;
     
 	private int initialPC, initialSP;
 
@@ -1195,6 +958,20 @@ public class UserProcess {
 	private static final int pageSize = Processor.pageSize;
 
 	private static final char dbgProcess = 'a';
-
-
+	
+	private OpenFile[] file_arr;
+	
+	private int Process_ID;
+	
+	private UserProcess parent;
+	
+	private HashMap<Integer, UserProcess> child;
+	
+	private HashMap<Integer, Integer> childStatus;
+	
+	private Integer status; //initialized it in handle exit
+	
+	private int exit_flag;
+	
+	private Lock lock_status_map;
 }
