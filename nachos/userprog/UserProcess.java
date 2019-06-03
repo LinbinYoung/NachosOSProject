@@ -702,7 +702,7 @@ public class UserProcess {
 	 * no more data is available.
 	 */
 	private int handleRead(int fileDescriptor, int bufferAddr, int count){
-		if(fileDescriptor < 0 || fileDescriptor == 1 || fileDescriptor>=s_fileTableSize || count < 0) return -1;
+		if(fileDescriptor < 0 || fileDescriptor>=s_fileTableSize || count < 0) return -1;
 		OpenFile file = null;
 		Pipe p_file = null;
 		if (!(this.fileDescTable[fileDescriptor] instanceof Pipe)) file = this.fileDescTable[fileDescriptor];
@@ -715,7 +715,7 @@ public class UserProcess {
 		while(count > 0){
 			if(file !=null) cur_ker_read = file.read(buffer, 0, Math.min(count, pageSize));
 			else cur_ker_read = p_file.readPipe(bufferAddr, count);
-			if(cur_ker_read <= 0) return -1;
+			if(cur_ker_read <= 0) return bytes_read;
 
 			cur_pro_write = writeVirtualMemory(bufferAddr, buffer, 0, cur_ker_read);
 			if(cur_ker_read != cur_pro_write) return -1;
@@ -744,7 +744,7 @@ public class UserProcess {
 	 * if a network stream has already been terminated by the remote host.
 	 */
 	private int handleWrite(int fileDescriptor, int bufferAddr, int count){
-		if(fileDescriptor <= 0 || fileDescriptor>=s_fileTableSize || count < 0) {
+		if(fileDescriptor < 0 || fileDescriptor>=s_fileTableSize || count < 0) {
 			Lib.debug(dbgProcess, String.format("fD %d not in range or count < 0", fileDescriptor));
 			return -1;
 		}
