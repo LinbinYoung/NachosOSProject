@@ -52,146 +52,133 @@ public class VMProcess extends UserProcess {
 	}
 
 	public int readVirtualMemory(int vaddr, byte[] data, int offset, int length) {
-		/*
-		 * read data from memory and store the data into the array
-		 */
 		Lib.assertTrue(offset >= 0 && length >= 0 && offset + length <= data.length);
+		VMKernel.vmlock.acquire();
+		if (data == null || vaddr < 0) {
+			VMKernel.vmlock.release();
+			return 0;	
+		}
 		byte[] memory = Machine.processor().getMemory();
-		if (vaddr < 0 || vaddr >= memory.length) {
-			return 0;
-		}
-		int success_read = 0;
-		int vpn = Processor.pageFromAddress(vaddr);
-		if (vpn < 0 || vpn >= super.pageTable.length) {
-			return 0; // success_read = 0
-		}
-		int phy_offset = Processor.offsetFromAddress(vaddr);
-		TranslationEntry entry = super.pageTable[vpn];
-		int phy_addr = pageSize * entry.ppn + phy_offset;
-		if (phy_addr >= memory.length || phy_addr < 0) {
-			System.out.println("Invalid Physical Address");
-			return 0;
-		}
-		int start = 0;
+		int successRead = 0;
 		while (length > 0) {
-			if (!entry.valid) {
-				// trigger page default
-				handlePageFault(Processor.makeAddress(vpn, 0));
+			if (vaddr >= numPages*pageSize){
+				VMKernel.vmlock.release();
+				return successRead;
 			}
-			entry.used = true;
-			if (phy_offset + length > pageSize) {
-				int can_write_length = pageSize - phy_offset;
-				try {
-					System.arraycopy(memory, phy_addr, data, start, can_write_length);
-				} catch (Exception e) {
-					return success_read;
+			int vpn = Processor.pageFromAddress(vaddr);
+			int p_offset = Processor.offsetFromAddress(vaddr);
+			int readLen = Math.min(pageSize - p_offset, length);
+			if (this.pageTable[vpn].valid == false){
+				handlePageFault(vaddr);
+				VMKernel.FreeCounter ++;
+				if (this.pageTable[vpn].valid == false){
+					//not allocated
+					VMKernel.FreeCounter --;
+					VMKernel.vmlock.release();
+					return successRead;
 				}
-				start = start + can_write_length;
-				length = length - can_write_length;
-				success_read += can_write_length;
-				if (++vpn > this.pageTable.length) {
-					return success_read;
-				}
-				entry.used = false;
-				entry = this.pageTable[vpn];
-				phy_offset = 0;
-				phy_addr = entry.ppn * pageSize + phy_offset;
-				if (phy_addr >= memory.length || phy_addr < 0) {
-					System.out.println("Invalid Physical Address");
-					return success_read;
-				}
-				if (!entry.valid) {
-					handlePageFault(Processor.makeAddress(vpn, 0));
-				}
-				entry.used = true;
-			} else {
-				int can_write_length = length;
-				try {
-					System.arraycopy(memory, phy_addr, data, start, can_write_length);
-				} catch (Exception e) {
-					return success_read;
-				}
-				success_read += can_write_length;
-				start = start + can_write_length;
-				length = length - can_write_length;
-				entry.used = false;
+			}else{
+				VMKernel.FreeCounter ++;
 			}
-		} // end while
-		return success_read;
+			// After getting the valid page in the pageFault
+			// We have finish the mapping between pageTable and Memory
+			// synchronized between Information.TLE and this.PageTable
+			pageTable[vpn].used = true;
+			VMKernel.FrameAttachedInfo[pageTable[vpn].ppn].TLE = pageTable[vpn];
+			VMKernel.FrameAttachedInfo[pageTable[vpn].ppn].pin = true;
+			int paddr = pageTable[vpn].ppn * pageSize + p_offset;
+			if (paddr < 0 || paddr >= memory.length) {
+				//wake up a process that waits for this page frame
+				VMKernel.FreeCounter --;
+				VMKernel.FrameAttachedInfo[pageTable[vpn].ppn].pin= false;
+				VMKernel.CV.wake();
+				VMKernel.vmlock.release();
+				return successRead;
+			}
+			try {
+				System.arraycopy(memory, paddr, data, offset, readLen);
+			}catch(Exception e){
+				//wake up a process that waits for this page frame
+				VMKernel.FreeCounter --;
+				VMKernel.FrameAttachedInfo[pageTable[vpn].ppn].pin = false;
+				VMKernel.CV.wake();
+				VMKernel.vmlock.release();
+				return successRead;
+			}
+			VMKernel.FreeCounter --;
+			VMKernel.FrameAttachedInfo[pageTable[vpn].ppn].pin = false;
+			VMKernel.CV.wake();
+			vaddr += readLen;
+			successRead += readLen;
+			length -= readLen;
+			offset += readLen;
+		}
+		VMKernel.vmlock.release();
+		return successRead;
 	}
-
+	
 	public int writeVirtualMemory(int vaddr, byte[] data, int offset, int length) {
 		Lib.assertTrue(offset >= 0 && length >= 0 && offset + length <= data.length);
+		VMKernel.vmlock.acquire();
+		if (vaddr < 0){
+			VMKernel.vmlock.release();
+			return 0;
+		}
 		byte[] memory = Machine.processor().getMemory();
-		if (vaddr < 0 || vaddr >= memory.length)
-			return 0;
-		int success_write = 0;
-		int vpn = Processor.pageFromAddress(vaddr);
-		if (vpn < 0 || vpn >= this.pageTable.length) {
-			return 0;
-		}
-		int phy_offset = Processor.offsetFromAddress(vaddr); // Use vpn to get the entry of ppn
-		TranslationEntry entry = this.pageTable[vpn];
-		int phy_addr = pageSize * entry.ppn + phy_offset;
-		if (phy_addr >= memory.length || phy_addr < 0) {
-			System.out.println("Invalid Physical Address");
-			return 0;
-		}
-		if (entry.readOnly) {
-			// we cannot write data to memory
-			return 0;
-		}
-		if (!entry.valid) {
-			handlePageFault(Processor.makeAddress(vpn, 0));
-		}
-		entry.used = true;
-		int start = 0;
+		int sucessWrite = 0; 
 		while (length > 0) {
-			// write page by page
-			if (phy_offset + length > pageSize) {
-				int can_to_memory = pageSize - phy_offset;
-				try {
-					System.arraycopy(data, start, memory, phy_addr, can_to_memory);
-				} catch (Exception e) {
-					return success_write;
-				}
-				success_write += can_to_memory;
-				start = start + can_to_memory;
-				length = length - can_to_memory;
-				if (++vpn > this.pageTable.length) {
-					return success_write;
-				}
-				entry.used = false;
-				// calculate the new phy_addr
-				entry = this.pageTable[vpn];
-				phy_offset = 0;
-				phy_addr = pageSize * entry.ppn + phy_offset;
-				if (phy_addr >= memory.length || phy_addr < 0) {
-					System.out.println("Invalid Physical Address");
-					return success_write;
-				}
-				if (entry.readOnly) {
-					// we cannot write data to memory
-					return success_write;
-				}
-				if (!entry.valid) {
-					handlePageFault(Processor.makeAddress(vpn, 0));
-				}
-				entry.used = true;
-			} else {
-				int can_to_memory = length;
-				try {
-					System.arraycopy(data, start, memory, phy_addr, can_to_memory);
-				} catch (Exception e) {
-					return success_write;
-				}
-				success_write += can_to_memory;
-				start = start + can_to_memory;
-				length = length - can_to_memory;
-				entry.used = false;
+			int vpn = Processor.pageFromAddress(vaddr);
+			int p_offset = Processor.offsetFromAddress(vaddr);
+			if (this.pageTable[vpn].readOnly) {
+				VMKernel.vmlock.release();
+				return sucessWrite;
 			}
+			if (!this.pageTable[vpn].valid) {
+				handlePageFault(vaddr);
+				VMKernel.FreeCounter ++;
+				if (!this.pageTable[vpn].valid) {
+					// not allocated
+					VMKernel.FreeCounter --;
+					VMKernel.vmlock.release();
+					return sucessWrite;
+				}
+			}else {
+				VMKernel.FreeCounter ++;
+			}
+			pageTable[vpn].used = true;
+			pageTable[vpn].dirty = true;
+			//synchronized between Information.TLE and this.PageTable
+			VMKernel.FrameAttachedInfo[pageTable[vpn].ppn].TLE = pageTable[vpn];
+			VMKernel.FrameAttachedInfo[pageTable[vpn].ppn].pin = true;
+			VMKernel.FreeCounter ++;
+			int writeLen = Math.min(length, pageSize-p_offset);
+			int paddr = this.pageTable[vpn].ppn * pageSize + p_offset;
+			if (paddr < 0 || paddr >= memory.length) {
+				VMKernel.FrameAttachedInfo[pageTable[vpn].ppn].pin = false;
+				VMKernel.FreeCounter --;
+				VMKernel.CV.wake();
+				VMKernel.vmlock.release();
+				return sucessWrite;
+			}
+			try {
+				System.arraycopy(data, offset, memory, paddr, writeLen);
+			}catch(Exception e){
+				VMKernel.FrameAttachedInfo[pageTable[vpn].ppn].pin = false;
+				VMKernel.FreeCounter --;
+				VMKernel.CV.wake();
+				VMKernel.vmlock.release();
+				return sucessWrite;
+			}
+			VMKernel.FrameAttachedInfo[pageTable[vpn].ppn].pin = false;
+			VMKernel.FreeCounter --;
+			VMKernel.CV.wake();
+			length -= writeLen;
+			vaddr += writeLen;
+			offset += writeLen;
+			sucessWrite += writeLen;
 		}
-		return success_write;
+		VMKernel.vmlock.release();
+		return sucessWrite;
 	}
 
 	/**
@@ -209,9 +196,11 @@ public class VMProcess extends UserProcess {
 	 * 
 	 * @param cause the user exception that occurred.
 	 */
+	
 	public void handlePageFault(int vaddr) {
-		// the requested frame's corresponding vpn is cur_vpn
-		// We first check the .coff section then 8 stack page and then 1 parameter page
+		// The requested frame's corresponding vpn is cur_vpn
+		// We first check the coff section then 8 stack page and then 1 parameter page
+		UserKernel.lock_page.P();
 		int goal_vpn = Processor.pageFromAddress(vaddr);
 		for (int s = 0; s < coff.getNumSections(); s++) {
 			CoffSection section = coff.getSection(s);
@@ -219,140 +208,127 @@ public class VMProcess extends UserProcess {
 			Lib.debug(dbgProcess, "\tinitializing " + section.getName() + " section (" + section.getLength() + " pages)");
 			for (int i = 0; i < section.getLength(); i++) {
 				int vpn = start + i;
-				if (vpn == goal_vpn) {
+				if (vpn == goal_vpn){
 					TranslationEntry entry = pageTable[vpn];
 					UserKernel.lock_page.P();
-					Integer free_physical_page = UserKernel.mPhyPage.removeFirst();
-					UserKernel.lock_page.V();
-					if (free_physical_page == null) {
-						// keep pining until get available physical pages
-						// victim page
-						while (true) {
+					Integer free_physical_page;
+					try {
+						free_physical_page = UserKernel.mPhyPage.removeFirst();
+					}catch(IndexOutOfBoundsException e){
+						// Clock Algorithm to fetch the physical frame that we want
+						for(;;) {
 							if (VMKernel.PinCounter == Machine.processor().getNumPhysPages()) {
-								// No available Physical Pages
 								VMKernel.CV.sleep();
 							}
-							if (VMKernel.FrameAttachedInfo[VMKernel.victim].pin) {
-								// the victim page has been referenced, jump to next available page
-								VMKernel.victim = (VMKernel.victim + 1) % Machine.processor().getNumPhysPages();
-								continue;
-							} else {
-								if (VMKernel.FrameAttachedInfo[VMKernel.victim].TLE.used == false) {
-									// find the available physical page
+							if (!VMKernel.FrameAttachedInfo[VMKernel.victim].pin) {
+								// the victim page has not been pinned
+								if (!VMKernel.FrameAttachedInfo[VMKernel.victim].TLE.used) {
+									// we have found the goal, the corresponding physical frame is 
+									// not used and is not pinned
+									free_physical_page = VMKernel.victim;
+									VMKernel.victim = (VMKernel.victim + 1) % (Machine.processor().getNumPhysPages()); // Do we really need it?
 									break;
 								}
-								VMKernel.FrameAttachedInfo[VMKernel.victim].TLE.used = false;
-								VMKernel.victim = (VMKernel.victim + 1) % Machine.processor().getNumPhysPages();
-							}
-						} // end pinning
-							// Now the victim stores the physical page number we try to allocate
-						int evict_num = VMKernel.victim;
-						VMKernel.victim = (VMKernel.victim + 1) % Machine.processor().getNumPhysPages();
-						// if the corresponding physical page is changed, dirty page = 1
-						if (VMKernel.FrameAttachedInfo[evict_num].TLE.dirty) {
-							// we could not use this page, because this page is modified by another page
-							int spn = 0;
-							if (VMKernel.freeSwapPage.isEmpty()) {
-								// no available free Swap page
-								spn = VMKernel.FreeCounter;
-								VMKernel.FreeCounter++;
-							}
-							VMKernel.swap_file.write(spn * Processor.pageSize, Machine.processor().getMemory(),
-									Processor.makeAddress(VMKernel.FrameAttachedInfo[evict_num].TLE.ppn, 0),
-									Processor.pageSize);
-							VMKernel.FrameAttachedInfo[evict_num].TLE.vpn = spn;
+							}// Pin here we should use integer or boolean
+							VMKernel.victim = (VMKernel.victim + 1) % (Machine.processor().getNumPhysPages());
 						}
-						free_physical_page = evict_num; // note here is there any inaccuracy?
-					}
-					if (!pageTable[vpn].dirty) {
-						entry.ppn = free_physical_page;
-						entry.readOnly = section.isReadOnly();
-						entry.valid = true;
-						section.loadPage(i, entry.ppn);
-					} else {
-						VMKernel.swap_file.read(pageTable[vpn].vpn * Processor.pageSize,
-								Machine.processor().getMemory(), Processor.makeAddress(free_physical_page, 0),
-								Processor.pageSize);
-						VMKernel.freeSwapPage.add(vpn);
-						entry.ppn = free_physical_page;
-						entry.readOnly = section.isReadOnly();
-						entry.valid = true;
-						section.loadPage(i, entry.ppn);
-					}
-//					VMKernel.FrameAttachedInfo[free_physical_page].TLE.valid = false;
-					VMKernel.FrameAttachedInfo[free_physical_page].vmp = this;
+						//check the dirty bit of the free_physical
+						if (VMKernel.FrameAttachedInfo[free_physical_page].TLE.dirty) {
+							// This page has been modified by another process
+							// Here we use spn to index the page frame for the swap file
+							Integer spn;
+							try {
+								spn = VMKernel.freeSwapPage.removeFirst();
+							}catch(IndexOutOfBoundsException e_e) {
+								//add a new page to the swap file
+								spn = VMKernel.swap_page_num;
+								VMKernel.swap_page_num ++;
+							}
+							// Need to store the info of current page to the swap file
+							VMKernel.swap_file.write(spn*VMProcess.pageSize, Machine.processor().getMemory(), Processor.makeAddress(VMKernel.FrameAttachedInfo[free_physical_page].TLE.ppn,0), VMProcess.pageSize);
+							VMKernel.FrameAttachedInfo[free_physical_page].TLE.vpn = spn;
+							VMKernel.FrameAttachedInfo[free_physical_page].TLE.valid = false;
+							// Map from swap file to actually memory, but the actual index is still vpn itself
+						}
+						if (pageTable[vpn].dirty) {
+							VMKernel.swap_file.read(pageTable[vpn].vpn * Processor.pageSize, Machine.processor().getMemory(), Processor.makeAddress(free_physical_page, 0), Processor.pageSize);
+                            VMKernel.freeSwapPage.add(pageTable[vpn].vpn);
+                            pageTable[vpn] = new TranslationEntry(vpn, free_physical_page, true, false, true, true);
+						}else {
+							entry.ppn = free_physical_page;
+							entry.readOnly = section.isReadOnly();
+							section.loadPage(i, entry.ppn);
+						}
+					}// end for catch
+					VMKernel.FrameAttachedInfo[entry.ppn].vmp = this;
+		            VMKernel.FrameAttachedInfo[entry.ppn].TLE = pageTable[vpn];
 					break;
-				} // allocate the physical page that we need
+				} // allocate the physical page that we need, end if
 			} // end for
 		}
-
 		// 0-num_of_sections
 		// 8 stack pages
 		// 1 page reserved for arguments
 		for (int i = numPages - 9; i < numPages; i++) {
 			int vpn = i;
-			if (vpn == goal_vpn) {
+			if (vpn == goal_vpn){
 				TranslationEntry entry = pageTable[vpn];
 				UserKernel.lock_page.P();
-				Integer free_physical_page = UserKernel.mPhyPage.removeFirst();
-				UserKernel.lock_page.V();
-				if (free_physical_page == null) {
-					// keep pining until get available physical pages
-					// victim page
-					while (true) {
+				Integer free_physical_page;
+				try {
+					free_physical_page = UserKernel.mPhyPage.removeFirst();
+				}catch(IndexOutOfBoundsException e){
+					// Clock Algorithm to fetch the physical frame that we want
+					for(;;) {
 						if (VMKernel.PinCounter == Machine.processor().getNumPhysPages()) {
-							// No available Physical Pages
 							VMKernel.CV.sleep();
 						}
-						if (VMKernel.FrameAttachedInfo[VMKernel.victim].pin) {
-							// the victim page has been referenced, jump to next available page
-							VMKernel.victim = (VMKernel.victim + 1) % Machine.processor().getNumPhysPages();
-							continue;
-						} else {
-							if (VMKernel.FrameAttachedInfo[VMKernel.victim].TLE.used == false) {
-								// find the available physical page
+						if (!VMKernel.FrameAttachedInfo[VMKernel.victim].pin) {
+							// the victim page has not been pinned
+							if (!VMKernel.FrameAttachedInfo[VMKernel.victim].TLE.used) {
+								// we have found the goal, the corresponding physical frame is 
+								// not used and is not pinned
+								free_physical_page = VMKernel.victim;
+								VMKernel.victim = (VMKernel.victim + 1) % (Machine.processor().getNumPhysPages()); // Do we really need it?
 								break;
 							}
-							VMKernel.FrameAttachedInfo[VMKernel.victim].TLE.used = false;
-							VMKernel.victim = (VMKernel.victim + 1) % Machine.processor().getNumPhysPages();
-						}
-					} // end pinning
-						// Now the victim stores the physical page number we try to allocate
-					int evict_num = VMKernel.victim;
-					VMKernel.victim = (VMKernel.victim + 1) % Machine.processor().getNumPhysPages();
-					// if the corresponding physical page is changed, dirty page = 1
-					if (VMKernel.FrameAttachedInfo[evict_num].TLE.dirty) {
-						// we could not use this page, because this page is modified by another page
-						int spn = 0;
-						if (VMKernel.freeSwapPage.isEmpty()) {
-							// no available free Swap page
-							spn = VMKernel.FreeCounter;
-							VMKernel.FreeCounter++;
-						}
-						VMKernel.swap_file.write(spn * Processor.pageSize, Machine.processor().getMemory(),
-								Processor.makeAddress(VMKernel.FrameAttachedInfo[evict_num].TLE.ppn, 0),
-								Processor.pageSize);
-						VMKernel.FrameAttachedInfo[evict_num].TLE.vpn = spn;
+						}// Pin here we should use integer or boolean
+						VMKernel.victim = (VMKernel.victim + 1) % (Machine.processor().getNumPhysPages());
 					}
-					free_physical_page = evict_num; // note here is there any inaccuracy?
-				}
-				if (!pageTable[vpn].dirty) {
-					entry.ppn = free_physical_page;
-					entry.valid = true;
-				} else {
-					VMKernel.swap_file.read(pageTable[vpn].vpn * Processor.pageSize, Machine.processor().getMemory(),
-							Processor.makeAddress(free_physical_page, 0), Processor.pageSize);
-					VMKernel.freeSwapPage.add(vpn);
-					entry.ppn = free_physical_page;
-					entry.valid = true;
-				}
-//				VMKernel.FrameAttachedInfo[free_physical_page].TLE.valid = false;
-				VMKernel.FrameAttachedInfo[free_physical_page].vmp = this;
+					//check the dirty bit of the free_physical
+					if (VMKernel.FrameAttachedInfo[free_physical_page].TLE.dirty) {
+						// This page has been modified by another process
+						// Here we use spn to index the page frame for the swap file
+						Integer spn;
+						try {
+							spn = VMKernel.freeSwapPage.removeFirst();
+						}catch(IndexOutOfBoundsException e_e) {
+							//add a new page to the swap file
+							spn = VMKernel.swap_page_num;
+							VMKernel.swap_page_num ++;
+						}
+						// Need to store the info of current page to the swap file
+						VMKernel.swap_file.write(spn*VMProcess.pageSize, Machine.processor().getMemory(), Processor.makeAddress(VMKernel.FrameAttachedInfo[free_physical_page].TLE.ppn,0), VMProcess.pageSize);
+						VMKernel.FrameAttachedInfo[free_physical_page].TLE.vpn = spn;
+						VMKernel.FrameAttachedInfo[free_physical_page].TLE.valid = false;
+						// Map from swap file to actually memory, but the actual index is still vpn itself
+					}
+					if (pageTable[vpn].dirty) {
+						VMKernel.swap_file.read(pageTable[vpn].vpn * Processor.pageSize, Machine.processor().getMemory(), Processor.makeAddress(free_physical_page, 0), Processor.pageSize);
+                        VMKernel.freeSwapPage.add(pageTable[vpn].vpn);
+                        pageTable[vpn] = new TranslationEntry(vpn, free_physical_page, true, false, true, true);
+					}else {
+						entry.ppn = free_physical_page;
+					}
+				}// end for catch
+				VMKernel.FrameAttachedInfo[entry.ppn].vmp = this;
+	            VMKernel.FrameAttachedInfo[entry.ppn].TLE = pageTable[vpn];
 				break;
-			} // allocate the physical page that we need
+			} // allocate the physical page that we need, end if
 		} // end for
+		UserKernel.lock_page.V();
 	}
-
+	
 	public void handleException(int cause) {
 		Processor processor = Machine.processor();
 		switch (cause) {
@@ -364,7 +340,6 @@ public class VMProcess extends UserProcess {
 			break;
 		}
 	}
-
 	private static final int pageSize = Processor.pageSize;
 	private static final char dbgProcess = 'a';
 	private static final char dbgVM = 'v';

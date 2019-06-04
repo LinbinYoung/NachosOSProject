@@ -25,16 +25,15 @@ public class VMKernel extends UserKernel {
 	public void initialize(String[] args) {
 		super.initialize(args);
 		this.freeSwapPage = new LinkedList<>();
-		this.lock = new Lock();
+		this.vmlock = new Lock();
 		this.victim = 0;
 		this.PinCounter = 0;
 		this.FreeCounter = 0;
+		this.swap_page_num = 0;
 		this.swap_file = new OpenFile();
-		this.CV = new Condition(lock);
+		this.CV = new Condition(vmlock);
 		for (int i = 0; i < Machine.processor().getNumPhysPages(); i ++) {
-			
 			FrameAttachedInfo[i] = new FramesInfo(null, null, false);
-			System.out.println(i);
 		}
 	}
 
@@ -66,7 +65,8 @@ public class VMKernel extends UserKernel {
 	public static int victim;
 	public static int PinCounter;
 	public static int FreeCounter;
-	public static Lock lock;
+	public static int swap_page_num;
+	public static Lock vmlock;
 	public static Condition CV;
 	public static OpenFile swap_file;
 	public static FramesInfo[] FrameAttachedInfo = new FramesInfo[Machine.processor().getNumPhysPages()];
