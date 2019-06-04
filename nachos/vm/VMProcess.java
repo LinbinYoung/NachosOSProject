@@ -6,6 +6,7 @@ import nachos.userprog.*;
 import nachos.vm.*;
 
 /**
+ * write1, write4
  * A <tt>UserProcess</tt> that supports demand-paging.
  */
 public class VMProcess extends UserProcess {
@@ -58,6 +59,7 @@ public class VMProcess extends UserProcess {
 	// Update readVirtualMemory and writeVirtualMemory to handle invalid pages and page faults.
 	@Override
 	public int writeVirtualMemory(int vaddr, byte[] data, int offset, int length) {
+		System.out.println("[write vm]: ");
 		Lib.assertTrue(offset >= 0 && length >= 0 && offset + length <= data.length);
 		byte[] memory = Machine.processor().getMemory();
 		if (vaddr < 0 || vaddr >= memory.length) return 0;
@@ -85,15 +87,18 @@ public class VMProcess extends UserProcess {
 			off = 0;
 			offset += write;
 			length -= write;
-			vpn++;
 			VMKernel.IPT[pageTable[vpn].ppn].pinCount--;
 			VMKernel.totalPinCount--;
+			VMKernel.pinLock.acquire();
 			VMKernel.pinCond.wake();
+			VMKernel.pinLock.release();
+			vpn++;
 		}
 		return offset-first;
 	}
 	@Override
 	public int readVirtualMemory(int vaddr, byte[] data, int offset, int length) {
+//		System.out.printf("[Read VM]: vaddr <%d>, offset <%d>, length <%d>\n", vaddr, offset, length);
 		Lib.assertTrue(offset >= 0 && length >= 0 && offset + length <= data.length);
 		byte[] memory = Machine.processor().getMemory();
 		if (vaddr < 0 || vaddr >= memory.length) return 0;
@@ -108,7 +113,8 @@ public class VMProcess extends UserProcess {
 			if(vpn >= super.pageTable.length || paddr<0 || paddr >= memory.length) return offset-first;
 			if(!pageTable[vpn].valid) handlePageFault(vaddr);
 			if(pageTable[vpn].valid){
-				if (pageTable[vpn].readOnly) return offset-first;
+				//TODO: readonly not needed to check
+//				if (pageTable[vpn].readOnly) {System.out.println("Read only"); return offset-first;}
 				VMKernel.IPT[pageTable[vpn].ppn].pinCount++;
 				VMKernel.totalPinCount++;
 				pageTable[vpn].used = true;
@@ -119,10 +125,13 @@ public class VMProcess extends UserProcess {
 			off = 0;
 			offset += read;
 			length -= read;
-			vpn++;
+//			System.out.printf("[read VM]: vpn <%d>, ppn <%d>\n", vpn, pageTable[vpn].ppn);
 			VMKernel.IPT[pageTable[vpn].ppn].pinCount--;
 			VMKernel.totalPinCount--;
+			VMKernel.pinLock.acquire();
 			VMKernel.pinCond.wake();
+			VMKernel.pinLock.release();
+			vpn++;
 		}
 		return offset - first;
 	}
@@ -138,7 +147,7 @@ public class VMProcess extends UserProcess {
 		Processor processor = Machine.processor();
 		switch (cause) {
 			case Processor.exceptionPageFault:
-				System.out.println("#mcip: exception page fault.");
+//				System.out.printf("[handle ex]: bad vaddr <%d>\n",processor.readRegister(processor.regBadVAddr));
 				this.handlePageFault(processor.readRegister(processor.regBadVAddr));
 				break;
 		default:
@@ -152,6 +161,7 @@ public class VMProcess extends UserProcess {
 	// read the corresponding data page from the file, and a fault on a stack page or arguments page should
 	// zero-fill the frame.
 	public void handlePageFault(int badVaddr) {
+//		System.out.println("[handlePageFault]: ");
 		int badVPN = Processor.pageFromAddress(badVaddr);
 		Processor processor = Machine.processor();
 
@@ -165,7 +175,9 @@ public class VMProcess extends UserProcess {
 		int ppn = -1, swapVPN = -1;
 		if (!UserKernel.physicalPageList.isEmpty()) {
 			ppn = UserKernel.physicalPageList.remove(0);
+			UserKernel.physicalPageSema.V();
 		} else {
+			UserKernel.physicalPageSema.V();
 			while (true) {
 				while (VMKernel.totalPinCount == Machine.processor().getNumPhysPages()) {
 					VMKernel.pinCond.sleep();
@@ -191,11 +203,12 @@ public class VMProcess extends UserProcess {
 			VMKernel.IPT[ppn].tle.valid = false;
 //			ppn = VMKernel.IPT[badVPN].tle.ppn;
 		}
+		System.out.printf("[handle fault]: vpn <%d>, ppn <%d>, bad vaddr <%d>\n", badVPN, ppn, badVaddr);
 		if (super.pageTable[badVPN].dirty){
 			VMKernel.swapFile.read(Processor.makeAddress(pageTable[badVPN].vpn, 0),
 					Machine.processor().getMemory(), Processor.makeAddress(ppn, 0), Processor.pageSize);
 			VMKernel.freeSwapPages.offer(super.pageTable[badVPN].vpn);
-			pageTable[badVPN] = new TranslationEntry(badVPN, ppn, true, false, true, true);
+			super.pageTable[badVPN] = new TranslationEntry(badVPN, ppn, true, false, true, true);
 		}else if (badVPN < numPages - stackPages){
 			for (int s = 0; s < coff.getNumSections(); s++) {
 				CoffSection section = coff.getSection(s);
@@ -209,11 +222,11 @@ public class VMProcess extends UserProcess {
 				}
 			}
 		}else{
-			System.out.println("Vpn is not coff sections");
+			System.out.println("[handle fault]: vpn is not coff sections");
 			byte[] data = new byte[Processor.pageSize];
 			System.arraycopy(data, 0, Machine.processor().getMemory(), Processor.makeAddress(ppn, 0),
 					Processor.pageSize);
-			pageTable[badVPN] = new TranslationEntry(badVPN, ppn, true, false, true, false);
+			super.pageTable[badVPN] = new TranslationEntry(badVPN, ppn, true, false, true, false);
 		}
 		VMKernel.IPT[ppn].process = this;
 		VMKernel.IPT[ppn].tle = super.pageTable[badVPN];

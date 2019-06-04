@@ -859,15 +859,16 @@ public class UserProcess {
 			//wake up parent if sleeping
 //			this.parent.thread.ready();
 		} /** if exits normally */
-		System.out.println("Debug again!!!!!!: "+this.pid);
+
 		UserKernel.processCountLock.acquire();
 		UserKernel.processCount--;
 		UserKernel.processCountLock.release();
+		System.out.printf("[handle exit]: pid <%d>, process count <%d>\n", this.pid, UserKernel.processCount);
 		UserKernel.childStatusMapLock.acquire();
 		this.childStatusMap.put(this.pid, 0);
 		UserKernel.childStatusMapLock.release();
 		if (UserKernel.processCount == 0){
-			System.out.println("Now halt: "+ this.pid);
+			System.out.println("[handle exit]: Now halt: "+ this.pid);
 			//In case of last process, terminate the current process
 			Kernel.kernel.terminate();
 		}else{
