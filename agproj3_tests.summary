@@ -1,0 +1,5 @@
+------[                  Fri Jun  7 14:45:51 2019                  ]------
+------[  Grading Commit: 76c6011e69e4ed1454707bfd3aa4e31feed13bc6  ]------
+PASS : swap4: Tests swapping by initializing an array larger than physical memory and reading through it - does not dirty the pages again
+PASS : swap5: Tests swapping by initializing an array larger than physical memory and reading through it - dirties the pages again after initialization
+
