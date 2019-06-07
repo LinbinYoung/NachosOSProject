@@ -438,6 +438,7 @@ public class VMProcess extends UserProcess {
 			if (VMKernel.IPT[VMKernel.victim].pin == true) {
 				if (VMKernel.pinCount == totalPhyPages)
 					VMKernel.CV.sleep();
+				
 				++VMKernel.victim;
 				VMKernel.victim /= totalPhyPages;
 				continue;
@@ -445,7 +446,9 @@ public class VMProcess extends UserProcess {
 
 			if (VMKernel.IPT[VMKernel.victim].entry.used == false)
 				break;
-			//VMKernel.IPT[VMKernel.victim].entry.used = false; // why????
+			
+			// for termination
+			VMKernel.IPT[VMKernel.victim].entry.used = false;
 			++VMKernel.victim;
 			VMKernel.victim /= totalPhyPages;
 
