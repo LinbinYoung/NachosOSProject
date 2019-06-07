@@ -400,7 +400,7 @@ public class VMProcess extends UserProcess {
 						this.handleDirtyPage(vpn, next_ppn);
 					}
 					VMKernel.IPT[next_ppn].process = this;
-					VMKernel.IPT[next_ppn].entry = pageTable[vpn];
+					VMKernel.IPT[next_ppn].entry = this.pageTable[vpn];
 				}
 			}
 		}
