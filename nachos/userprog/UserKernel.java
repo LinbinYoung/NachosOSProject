@@ -33,6 +33,7 @@ public class UserKernel extends ThreadedKernel {
 		for (int i =0; i < Machine.processor().getNumPhysPages(); ++i)
 			freePhyPages.add(i);
 		
+		this.mutex = new Lock();
 
 		Machine.processor().setExceptionHandler(new Runnable() {
 			public void run() {
@@ -148,6 +149,8 @@ public class UserKernel extends ThreadedKernel {
 	
 	public static int numOfRunningProcess = 0;
 	public static int procIDCounter = 0;
+	
+	public static Lock mutex;
 	
 }
 
