@@ -5,3 +5,10 @@ PASS : read-long: Test reading large amount from file
 PASS : write-long: Test writing large amount to file
 PASS : exec2: Execute multiple programs (three children)
 
+------[                  Fri Jun  7 15:46:44 2019                  ]------
+------[  Grading Commit: cf76a5a175d232fcc11dcd09a23138ec5a421543  ]------
+PASS : Test write10.c
+PASS : read-long: Test reading large amount from file
+PASS : write-long: Test writing large amount to file
+PASS : exec2: Execute multiple programs (three children)
+
