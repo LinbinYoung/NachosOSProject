@@ -11,3 +11,16 @@ nachos 5.0j initializing... config interrupt timer processor console user-check 
 success
 
 
+------[                  Fri Jun  7 15:40:55 2019                  ]------
+------[  Grading Commit: d17d60dd544f9316ba4e67fc45697426853e7448  ]------
+--[ swap4: Tests swapping by initializing an array larger than physical memory and reading through it - does not dirty the pages again ]--
+nachos 5.0j initializing... config interrupt timer processor console user-check grader
+
+success
+
+--[ swap5: Tests swapping by initializing an array larger than physical memory and reading through it - dirties the pages again after initialization ]--
+nachos 5.0j initializing... config interrupt timer processor console user-check grader
+
+success
+
+
