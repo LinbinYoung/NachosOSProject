@@ -77,6 +77,138 @@ public class VMProcess extends UserProcess {
 			break;
 		}
 	}
+	
+	
+	public int readVirtualMemory(int vaddr, byte[] data, int offset, int length) {
+		Lib.assertTrue(offset >= 0 && length >= 0 && offset + length <= data.length);
+		VMKernel.vmmutex.acquire();
+		if (data == null || vaddr < 0) {
+			VMKernel.vmmutex.release();
+			return 0;	
+		}
+		byte[] memory = Machine.processor().getMemory();
+		int successRead = 0;
+		while (length > 0) {
+			if (vaddr >= numPages*pageSize){
+				VMKernel.vmmutex.release();
+				return successRead;
+			}
+			int vpn = Processor.pageFromAddress(vaddr);
+			int p_offset = Processor.offsetFromAddress(vaddr);
+			int readLen = Math.min(pageSize - p_offset, length);
+			if (this.pageTable[vpn].valid == false){
+				handlePageFault(vaddr);
+				VMKernel.pinCount ++;
+				if (this.pageTable[vpn].valid == false){
+					//not allocated
+					VMKernel.pinCount --;
+					VMKernel.vmmutex.release();
+					return successRead;
+				}
+			}else{
+				VMKernel.pinCount ++;
+			}
+			// After getting the valid page in the pageFault
+			// We have finish the mapping between pageTable and Memory
+			// synchronized between Information.TLE and this.PageTable
+			pageTable[vpn].used = true;
+			VMKernel.IPT[pageTable[vpn].ppn].entry = pageTable[vpn];
+			VMKernel.IPT[pageTable[vpn].ppn].pin = true;
+			int paddr = pageTable[vpn].ppn * pageSize + p_offset;
+			if (paddr < 0 || paddr >= memory.length) {
+				//wake up a process that waits for this page frame
+				VMKernel.pinCount --;
+				VMKernel.IPT[pageTable[vpn].ppn].pin= false;
+				VMKernel.CV.wake();
+				VMKernel.vmmutex.release();
+				return successRead;
+			}
+			try {
+				System.arraycopy(memory, paddr, data, offset, readLen);
+			}catch(Exception e){
+				//wake up a process that waits for this page frame
+				VMKernel.pinCount --;
+				VMKernel.IPT[pageTable[vpn].ppn].pin = false;
+				VMKernel.CV.wake();
+				VMKernel.vmmutex.release();
+				return successRead;
+			}
+			VMKernel.pinCount --;
+			VMKernel.IPT[pageTable[vpn].ppn].pin = false;
+			VMKernel.CV.wake();
+			vaddr += readLen;
+			successRead += readLen;
+			length -= readLen;
+			offset += readLen;
+		}
+		VMKernel.vmmutex.release();
+		return successRead;
+	}
+	
+	public int writeVirtualMemory(int vaddr, byte[] data, int offset, int length) {
+		Lib.assertTrue(offset >= 0 && length >= 0 && offset + length <= data.length);
+		VMKernel.vmmutex.acquire();
+		if (vaddr < 0){
+			VMKernel.vmmutex.release();
+			return 0;
+		}
+		byte[] memory = Machine.processor().getMemory();
+		int sucessWrite = 0; 
+		while (length > 0) {
+			int vpn = Processor.pageFromAddress(vaddr);
+			int p_offset = Processor.offsetFromAddress(vaddr);
+			if (this.pageTable[vpn].readOnly) {
+				VMKernel.vmmutex.release();
+				return sucessWrite;
+			}
+			if (!this.pageTable[vpn].valid) {
+				handlePageFault(vaddr);
+				VMKernel.pinCount ++;
+				if (!this.pageTable[vpn].valid) {
+					// not allocated
+					VMKernel.pinCount --;
+					VMKernel.vmmutex.release();
+					return sucessWrite;
+				}
+			}else {
+				VMKernel.pinCount ++;
+			}
+			pageTable[vpn].used = true;
+			pageTable[vpn].dirty = true;
+			//synchronized between Information.TLE and this.PageTable
+			VMKernel.IPT[pageTable[vpn].ppn].entry = pageTable[vpn];
+			VMKernel.IPT[pageTable[vpn].ppn].pin = true;
+			VMKernel.pinCount ++;
+			int writeLen = Math.min(length, pageSize-p_offset);
+			int paddr = this.pageTable[vpn].ppn * pageSize + p_offset;
+			if (paddr < 0 || paddr >= memory.length) {
+				VMKernel.IPT[pageTable[vpn].ppn].pin = false;
+				VMKernel.pinCount --;
+				VMKernel.CV.wake();
+				VMKernel.vmmutex.release();
+				return sucessWrite;
+			}
+			try {
+				System.arraycopy(data, offset, memory, paddr, writeLen);
+			}catch(Exception e){
+				VMKernel.IPT[pageTable[vpn].ppn].pin = false;
+				VMKernel.pinCount --;
+				VMKernel.CV.wake();
+				VMKernel.vmmutex.release();
+				return sucessWrite;
+			}
+			VMKernel.IPT[pageTable[vpn].ppn].pin = false;
+			VMKernel.pinCount --;
+			VMKernel.CV.wake();
+			length -= writeLen;
+			vaddr += writeLen;
+			offset += writeLen;
+			sucessWrite += writeLen;
+		}
+		VMKernel.vmmutex.release();
+		return sucessWrite;
+	}
+
 
 //	public int readVirtualMemory(int vaddr, byte[] data, int offset, int length) {
 //		VMKernel.vmmutex.acquire();
@@ -135,241 +267,7 @@ public class VMProcess extends UserProcess {
 //		VMKernel.vmmutex.release();
 //		return sucessTransfer;
 //	}
-	public int readVirtualMemory(int vaddr, byte[] data, int offset, int length) {
-		VMKernel.vmmutex.acquire();
-		Lib.assertTrue(offset >= 0 && length >= 0 && offset + length <= data.length);
 
-		byte[] memory = Machine.processor().getMemory();
-
-		if (vaddr < 0) {
-			VMKernel.vmmutex.release();
-			return 0;
-		}
-		int left = length;
-		int amount = 0;
-		int cur_offset = offset;
-		int total_read = 0;
-		int paddr = -1;
-		int paddr_offset = Processor.offsetFromAddress(vaddr);
-		int vpn = Processor.pageFromAddress(vaddr);
-
-		if (vpn >= pageTable.length || vpn < 0) {
-			VMKernel.vmmutex.release();
-			return total_read;
-		}
-		if (pageTable[vpn].valid) {
-			VMKernel.IPT[pageTable[vpn].ppn].pin = true;
-			VMKernel.pinCount++;
-			pageTable[vpn].used = true;
-			paddr = pageTable[vpn].ppn * pageSize + paddr_offset; // if paddr but not good used bit set?????
-		} else {
-			handlePageFault(vaddr); // an error may occur??????
-			if (pageTable[vpn].valid) {
-				VMKernel.IPT[pageTable[vpn].ppn].pin = true;
-				VMKernel.pinCount++;
-				pageTable[vpn].used = true;
-				paddr = pageTable[vpn].ppn * pageSize + paddr_offset;
-			} else {
-				VMKernel.vmmutex.release();
-				return total_read;
-			}
-		}
-// for now, just assume that virtual addresses equal physical addresses
-		if (paddr < 0 || paddr >= memory.length) {
-			VMKernel.IPT[pageTable[vpn].ppn].pin = false;
-			VMKernel.pinCount--;
-			VMKernel.CV.wake();
-			VMKernel.vmmutex.release();
-			return 0;
-		}
-
-		amount = Math.min(left, (pageSize - paddr_offset));
-		System.arraycopy(memory, paddr, data, offset, amount);
-		VMKernel.IPT[pageTable[vpn].ppn].pin = false;
-		VMKernel.pinCount--;
-		VMKernel.CV.wake();
-		total_read += amount;
-		cur_offset += amount;
-		left -= amount;
-		while (left > 0) {
-			vpn++;
-			if (vpn >= pageTable.length || vpn < 0) {
-				VMKernel.vmmutex.release();
-				return total_read;
-			}
-			if (pageTable[vpn].valid) {
-				VMKernel.IPT[pageTable[vpn].ppn].pin = true;
-				VMKernel.pinCount++;
-//System.out.println("b");
-				pageTable[vpn].used = true;
-				paddr = pageTable[vpn].ppn * pageSize;
-			} else {
-				vaddr = Processor.makeAddress(vpn, 0);
-				handlePageFault(vaddr); // an error may occurrrrrr?????
-				if (pageTable[vpn].valid) { // valid means correct?????
-					VMKernel.IPT[pageTable[vpn].ppn].pin = true;
-					VMKernel.pinCount++;
-//System.out.println("a");
-					pageTable[vpn].used = true;
-					paddr = pageTable[vpn].ppn * pageSize;
-				} else {
-					VMKernel.vmmutex.release();
-					return total_read; // else return immedia????????
-				}
-			}
-
-			if (paddr < 0 || paddr >= memory.length) {
-				VMKernel.IPT[pageTable[vpn].ppn].pin = false;
-				VMKernel.pinCount--;
-				VMKernel.CV.wake();
-				VMKernel.vmmutex.release();
-				return total_read;
-			}
-			amount = Math.min(left, pageSize);
-			System.arraycopy(memory, paddr, data, cur_offset, amount);
-			VMKernel.IPT[pageTable[vpn].ppn].pin = false;
-			VMKernel.pinCount--;
-//System.out.println("jkafahkjfhadjkfhdashgasfbvsdfbasdfasd");
-			VMKernel.CV.wake();
-			total_read += amount;
-			cur_offset += amount;
-			left -= amount;
-		}
-
-		VMKernel.vmmutex.release();
-		return total_read;
-	}
-
-	public int writeVirtualMemory(int vaddr, byte[] data, int offset, int length) {
-
-		Lib.assertTrue(offset >= 0 && length >= 0 && offset + length <= data.length);
-		VMKernel.vmmutex.acquire();
-
-		byte[] memory = Machine.processor().getMemory();
-
-		if (vaddr < 0) {
-			VMKernel.vmmutex.release();
-			return 0;
-		}
-		int left = length;
-		int amount = 0;
-		int cur_offset = offset;
-		int total_write = 0;
-		int paddr = -1;
-		int paddr_offset = Processor.offsetFromAddress(vaddr);
-		int vpn = Processor.pageFromAddress(vaddr);
-
-		if (vpn >= pageTable.length || vpn < 0) {
-			VMKernel.vmmutex.release();
-			return total_write;
-		}
-
-		if (pageTable[vpn].valid) {
-			VMKernel.IPT[pageTable[vpn].ppn].pin = true;
-			VMKernel.pinCount++;
-//System.out.println("c");
-			if (pageTable[vpn].readOnly == false) {
-				paddr = pageTable[vpn].ppn * pageSize + paddr_offset;
-				pageTable[vpn].used = true;
-			}
-		} else {
-			handlePageFault(vaddr); // an error may occur??????
-			if (pageTable[vpn].valid) {
-				if (pageTable[vpn].readOnly == false) {
-					VMKernel.IPT[pageTable[vpn].ppn].pin = true;
-					VMKernel.pinCount++;
-//System.out.println("d");
-					paddr = pageTable[vpn].ppn * pageSize + paddr_offset;
-					pageTable[vpn].used = true;
-				} else {
-					VMKernel.vmmutex.release();
-					return total_write;
-				}
-			} else {
-				VMKernel.vmmutex.release();
-				return total_write;
-			}
-		}
-
-		// for now, just assume that virtual addresses equal physical addresses
-		if (paddr < 0 || paddr >= memory.length) {
-			VMKernel.IPT[pageTable[vpn].ppn].pin = false;
-			VMKernel.pinCount--;
-			VMKernel.CV.wake();
-			VMKernel.vmmutex.release();
-			return 0;
-		}
-
-		amount = Math.min(left, (pageSize - paddr_offset));
-		System.arraycopy(data, offset, memory, paddr, amount);
-		if (amount > 0) {
-			pageTable[vpn].dirty = true;
-		}
-		VMKernel.IPT[pageTable[vpn].ppn].pin = false;
-		VMKernel.pinCount--;
-		VMKernel.CV.wake();
-		total_write += amount;
-		cur_offset += amount;
-		left -= amount;
-		while (left > 0) {
-			vpn++;
-			if (vpn >= pageTable.length || vpn < 0) {
-				VMKernel.vmmutex.release();
-				return total_write;
-			}
-			if (pageTable[vpn].valid) {
-				if (pageTable[vpn].readOnly == false) {
-					VMKernel.IPT[pageTable[vpn].ppn].pin = true;
-					VMKernel.pinCount++;
-					paddr = pageTable[vpn].ppn * pageSize;
-					pageTable[vpn].used = true;
-				} else {
-					VMKernel.vmmutex.release();
-					return total_write;
-				}
-			} else {
-				vaddr = Processor.makeAddress(vpn, 0);
-				handlePageFault(vaddr); // an error may occur??????
-				if (pageTable[vpn].valid) {
-					if (pageTable[vpn].readOnly == false) {
-						VMKernel.IPT[pageTable[vpn].ppn].pin = true;
-						VMKernel.pinCount++;
-						paddr = pageTable[vpn].ppn * pageSize;
-						pageTable[vpn].used = true;
-					} else {
-						VMKernel.vmmutex.release();
-						return total_write;
-					}
-				} else {
-					VMKernel.vmmutex.release();
-					return total_write;
-				}
-			}
-
-			if (paddr < 0 || paddr >= memory.length) {
-				VMKernel.IPT[pageTable[vpn].ppn].pin = false;
-				VMKernel.pinCount--;
-				VMKernel.CV.wake();
-				VMKernel.vmmutex.release();
-				return total_write;
-			}
-			amount = Math.min(left, pageSize);
-			System.arraycopy(data, cur_offset, memory, paddr, amount);
-			if (amount > 0) {
-				pageTable[vpn].dirty = true;
-			}
-			VMKernel.IPT[pageTable[vpn].ppn].pin = false;
-			VMKernel.pinCount--;
-			VMKernel.CV.wake();
-			total_write += amount;
-			cur_offset += amount;
-			left -= amount;
-		}
-
-		VMKernel.vmmutex.release();
-		return total_write;
-
-	}
 
 	protected void handlePageFault(int badVaddr) {
 
@@ -404,8 +302,11 @@ public class VMProcess extends UserProcess {
 				}
 			}
 		}
+		
+		Lib.assertTrue(coffVpn + 1 == this.numPages - 9);
 
-		for (int i = coffVpn + 1; i < this.numPages; ++i) {
+		for (int i = this.numPages - 9; i < this.numPages; ++i) {
+
 			int vpn = i;
 			if (vpn == badVpn) {
 				int next_ppn = (UserKernel.freePhyPages.isEmpty()) ? this.evictPage()
@@ -417,6 +318,7 @@ public class VMProcess extends UserProcess {
 					this.handleDirtyPage(vpn, next_ppn);
 
 				VMKernel.IPT[next_ppn].process = this;
+				// sync IPT and pageTable
 				VMKernel.IPT[next_ppn].entry = pageTable[vpn];
 			}
 
